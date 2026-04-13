@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Portal - Select Configuration{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">Select Assessment Configuration</h2>
+        
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <form action="{{ url_for('assessment.test') }}" method="GET">
+                    <div class="mb-3">
+                        <label for="category" class="form-label fw-bold">Select Category</label>
+                        <select class="form-select" id="category" name="category" required>
+                            {% for cat, count in cat_counts.items() %}
+                                <option value="{{ cat }}">{{ cat | capitalize }} ({{ count }} available)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="difficulty" class="form-label fw-bold">Select Difficulty</label>
+                        <select class="form-select" id="difficulty" name="difficulty" required>
+                            <option value="mixed">Mixed</option>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="count" class="form-label fw-bold">Number of Questions (5-30)</label>
+                        <input type="number" class="form-control" id="count" name="count" value="10" min="5" max="30">
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Start Assessment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <strong>System Status:</strong> <br>
+            Total Questions in Database: {{ total_q }} <br>
+            Note: Ensure you have an uninterrupted connection. The timer relies on client-side JS but the session validates submission time.
+        </div>
+    </div>
+</div>
+{% endblock %}

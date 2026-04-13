@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Result{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow text-center mt-4 border-0">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Assessment Results</h4>
+            </div>
+            <div class="card-body py-5">
+                <h2 class="display-1 text-primary">{{ "%.1f"|format(attempt.score) }}%</h2>
+                <h4 class="text-muted mb-4">{{ attempt.category|capitalize }} Test</h4>
+                
+                <div class="row justify-content-center mb-4">
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-1">Time Taken</p>
+                        <h5>{{ attempt.time_taken // 60 }}m {{ attempt.time_taken % 60 }}s</h5>
+                    </div>
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-1">Total Questions</p>
+                        <h5>{{ attempt.total_questions }}</h5>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                {% if questions %}
+                <h4 class="mt-5 mb-4 border-bottom pb-2 text-start">Questions Review</h4>
+                {% for q in questions %}
+                <div class="card mb-3 text-start shadow-sm border-0">
+                    <div class="card-body bg-light">
+                        <p class="mb-2"><strong>Q{{ loop.index }}:</strong> {{ q.question_text }}</p>
+                        <ul class="list-unstyled ms-3">
+                            <li><span class="fw-bold">A:</span> {{ q.option_a }}</li>
+                            <li><span class="fw-bold">B:</span> {{ q.option_b }}</li>
+                            <li><span class="fw-bold">C:</span> {{ q.option_c }}</li>
+                            <li><span class="fw-bold">D:</span> {{ q.option_d }}</li>
+                        </ul>
+                        <div class="text-success fw-bold p-2 bg-white rounded border border-success mt-3 shadow-sm d-inline-block">
+                            Correct Answer: Option {{ q.correct_answer }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                <div class="mt-5">
+                    <a href="{{ url_for('assessment.index') }}" class="btn btn-primary me-2">Take Another Test</a>
+                    <a href="{{ url_for('assessment.history') }}" class="btn btn-outline-info me-2">View History</a>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

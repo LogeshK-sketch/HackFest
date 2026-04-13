@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2>Admin Dashboard</h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{{ url_for('admin.export') }}" class="btn btn-success"><i class="bi bi-download"></i> Export All Data</a>
+        
+        <form action="{{ url_for('admin.trigger_training') }}" method="POST" class="d-inline ms-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-cpu"></i> Retrain ML Model</button>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-center h-100 border-info">
+            <div class="card-body">
+                <h5 class="card-title text-info">Total Students</h5>
+                <h2 class="display-3">{{ total_students }}</h2>
+                <a href="{{ url_for('admin.students') }}" class="btn btn-sm btn-outline-info mt-2">Manage Students</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center h-100 border-secondary">
+            <div class="card-body">
+                <h5 class="card-title text-secondary">Total Questions</h5>
+                <h2 class="display-3">{{ total_questions }}</h2>
+                <a href="{{ url_for('admin.questions') }}" class="btn btn-sm btn-outline-secondary mt-2">Manage Questions</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white text-center">
+                <h5 class="mb-0">Student Readiness Distribution</h5>
+            </div>
+            <div class="card-body" style="height: 350px;">
+                <canvas id="readinessChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const doughnutCtx = document.getElementById('readinessChart').getContext('2d');
+    new Chart(doughnutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['High Readiness', 'Medium Readiness', 'Low Readiness'],
+            datasets: [{
+                data: [{{ readiness_dist.High }}, {{ readiness_dist.Medium }}, {{ readiness_dist.Low }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',  // success
+                    'rgba(255, 193, 7, 0.8)',  // warning
+                    'rgba(220, 53, 69, 0.8)'   // danger
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
