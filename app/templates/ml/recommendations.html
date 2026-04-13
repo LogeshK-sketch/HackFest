@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Study Recommendations{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Personalized Recommendations</h2>
+
+{% if recommendations %}
+<div class="row">
+    {% for rec in recommendations %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100 border-start border-primary border-4">
+            <div class="card-body">
+                <h4 class="card-title text-primary"><i class="bi bi-lightbulb"></i> {{ rec.area }}</h4>
+                <hr>
+                
+                <h6 class="text-muted mb-2">Focus Topics:</h6>
+                <ul>
+                    {% for topic in rec.topics %}
+                    <li>{{ topic }}</li>
+                    {% endfor %}
+                </ul>
+                
+                {% if rec.resources %}
+                <h6 class="text-muted mt-3 mb-2">Recommended Resources:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for resource in rec.resources %}
+                    <span class="badge bg-secondary">{{ resource }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info border-0 shadow-sm">
+    <h4 class="alert-heading">No recommendations yet.</h4>
+    <p>Take some assessments in the <a href="{{ url_for('assessment.index') }}" class="alert-link">Assessments section</a> to get personalized study recommendations based on your weak areas.</p>
+</div>
+{% endif %}
+
+<div class="mt-4 text-center">
+    <a href="{{ url_for('planner.index') }}" class="btn btn-outline-primary">Add Topics to Study Planner</a>
+</div>
+{% endblock %}

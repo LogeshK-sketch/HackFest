@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Student Dashboard</h2>
+    <div>
+        {% if latest_prediction %}
+            <span class="badge bg-{{ 'success' if latest_prediction.readiness_level == 'High' else 'warning' if latest_prediction.readiness_level == 'Medium' else 'danger' }} fs-6">
+                Readiness: {{ latest_prediction.readiness_level }}
+            </span>
+        {% else %}
+            <span class="badge bg-secondary fs-6">Not Predicted Yet</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-primary">
+            <div class="card-body">
+                <h5 class="card-title text-primary">Aptitude Score</h5>
+                <h2 class="display-4">{{ "%.1f"|format(current_user.aptitude_score) }}%</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-success">
+            <div class="card-body">
+                <h5 class="card-title text-success">Coding Score</h5>
+                <h2 class="display-4">{{ "%.1f"|format(current_user.coding_score) }}%</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-info">
+            <div class="card-body">
+                <h5 class="card-title text-info">Core Score</h5>
+                <h2 class="display-4">{{ "%.1f"|format(current_user.core_score) }}%</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Assessments</h5>
+                <a href="{{ url_for('assessment.index') }}" class="btn btn-sm btn-primary">Take Test</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_tests %}
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Score</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in recent_tests %}
+                        <tr>
+                            <td>{{ test.attempted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td><span class="badge bg-secondary">{{ test.category|capitalize }}</span></td>
+                            <td>{{ "%.1f"|format(test.score) }}%</td>
+                            <td>{{ test.time_taken // 60 }}m {{ test.time_taken % 60 }}s</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center p-4">
+                    <p class="text-muted">No tests taken yet. Start assessing yourself now!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Placement Readiness Model</h5>
+            </div>
+            <div class="card-body text-center">
+                <p>Use our ML model to predict your current readiness level based on your scores.</p>
+                
+                {% if latest_prediction %}
+                <div class="mb-3">
+                    <h6>Last Prediction: <span class="text-primary">{{ latest_prediction.predicted_at.strftime('%Y-%m-%d') }}</span></h6>
+                    <ul class="list-unstyled">
+                        <li>Level: <strong>{{ latest_prediction.readiness_level }}</strong></li>
+                        <li>Confidence: <strong>{{ "%.1f"|format(latest_prediction.confidence_score) }}%</strong></li>
+                    </ul>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar {{ 'bg-success' if latest_prediction.readiness_level == 'High' else 'bg-warning' if latest_prediction.readiness_level == 'Medium' else 'bg-danger' }}" role="progressbar" style="width: {{ latest_prediction.confidence_score }}%;" aria-valuenow="{{ latest_prediction.confidence_score }}" aria-valuemin="0" aria-valuemax="100">{{ "%.1f"|format(latest_prediction.confidence_score) }}%</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <form action="{{ url_for('ml.predict') }}" method="POST">
+                    <button type="submit" class="btn btn-outline-primary w-100">Run Prediction Now</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

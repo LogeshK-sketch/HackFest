@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2>Performance Analytics</h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{{ url_for('analytics.export') }}" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Export to CSV</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Score Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="scoreBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Recent Test Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="trendLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Score Bar Chart
+    const barCtx = document.getElementById('scoreBarChart').getContext('2d');
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Aptitude', 'Coding', 'Core'],
+            datasets: [{
+                label: 'Current Scores (%)',
+                data: [{{ scores.Aptitude }}, {{ scores.Coding }}, {{ scores.Core }}],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(255, 206, 86, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 206, 86, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Trend Line Chart
+    const lineCtx = document.getElementById('trendLineChart').getContext('2d');
+    
+    // Parse test history passed from backend
+    const labels = [
+        {% for test in test_history %}
+            '{{ test.date }} ({{ test.category|capitalize }})',
+        {% endfor %}
+    ];
+    const dataPoints = [
+        {% for test in test_history %}
+            {{ test.score }},
+        {% endfor %}
+    ];
+
+    new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Score History',
+                data: dataPoints,
+                fill: false,
+                borderColor: 'rgba(153, 102, 255, 1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

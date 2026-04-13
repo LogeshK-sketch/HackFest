@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}ML Prediction Result{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow mt-4">
+            <div class="card-header bg-dark text-white text-center">
+                <h4 class="mb-0">Placement Readiness Prediction</h4>
+            </div>
+            <div class="card-body text-center py-5">
+                <p class="lead text-muted">Based on your recent assessment scores, our ML model predicts your placement readiness level as:</p>
+                
+                {% set badge_color = 'success' if prediction.readiness_level == 'High' else 'warning' if prediction.readiness_level == 'Medium' else 'danger' %}
+                
+                <h1 class="display-3 text-{{ badge_color }} fw-bold mb-4">{{ prediction.readiness_level }}</h1>
+                
+                <div class="mb-5 px-md-5">
+                    <p class="mb-1 text-muted">Model Confidence</p>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-{{ badge_color }}" role="progressbar" style="width: {{ prediction.confidence_score }}%;" aria-valuenow="{{ prediction.confidence_score }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ "%.2f"|format(prediction.confidence_score) }}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('ml.recommendations') }}" class="btn btn-lg btn-primary me-2">View Recommendations</a>
+                    <a href="{{ url_for('ml.history') }}" class="btn btn-lg btn-outline-secondary">View History</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

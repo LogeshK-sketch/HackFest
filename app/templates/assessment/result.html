@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Result{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow text-center mt-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Assessment Results</h4>
+            </div>
+            <div class="card-body py-5">
+                <h2 class="display-1 text-primary">{{ "%.1f"|format(attempt.score) }}%</h2>
+                <h4 class="text-muted mb-4">{{ attempt.category|capitalize }} Test</h4>
+                
+                <div class="row justify-content-center mb-4">
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-1">Time Taken</p>
+                        <h5>{{ attempt.time_taken // 60 }}m {{ attempt.time_taken % 60 }}s</h5>
+                    </div>
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-1">Total Questions</p>
+                        <h5>{{ attempt.total_questions }}</h5>
+                    </div>
+                </div>
+                
+                <hr>
+                <div class="mt-4">
+                    <a href="{{ url_for('assessment.index') }}" class="btn btn-primary me-2">Take Another Test</a>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

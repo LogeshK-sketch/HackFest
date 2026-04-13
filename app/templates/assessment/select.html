@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Assessments - Placement System{% endblock %}
+
+{% block content %}
+<h2 class="mb-4 text-center">Select Assessment Category</h2>
+
+<div class="row mt-4">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h3 class="card-title text-primary mb-3"><i class="bi bi-calculator"></i> Aptitude</h3>
+                <p class="card-text text-muted">Test your logical, quantitative, and verbal reasoning skills.</p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('assessment.test', category='aptitude') }}" class="btn btn-primary w-100">Start Test</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h3 class="card-title text-success mb-3"><i class="bi bi-code-slash"></i> Coding</h3>
+                <p class="card-text text-muted">Evaluate your programming logic and problem-solving abilities.</p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('assessment.test', category='coding') }}" class="btn btn-success w-100">Start Test</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h3 class="card-title text-info mb-3"><i class="bi bi-cpu"></i> Core Subject</h3>
+                <p class="card-text text-muted">Assess your knowledge in core CS subjects like OS, DBMS, and CN.</p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('assessment.test', category='core') }}" class="btn btn-info text-white w-100">Start Test</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

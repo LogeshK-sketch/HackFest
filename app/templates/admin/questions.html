@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Questions{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2>Manage Questions</h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+            + Add New Question
+        </button>
+    </div>
+</div>
+
+<!-- Add Question Modal -->
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Add New Question</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('admin.add_question') }}" method="POST">
+          <div class="modal-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" name="category" required>
+                        <option value="aptitude">Aptitude</option>
+                        <option value="coding">Coding</option>
+                        <option value="core">Core Subjects</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Difficulty</label>
+                    <select class="form-select" name="difficulty" required>
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Question Text</label>
+                <textarea class="form-control" name="text" rows="2" required></textarea>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Option A</label>
+                    <input type="text" class="form-control" name="option_a" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Option B</label>
+                    <input type="text" class="form-control" name="option_b" required>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Option C</label>
+                    <input type="text" class="form-control" name="option_c" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Option D</label>
+                    <input type="text" class="form-control" name="option_d" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Correct Answer</label>
+                <select class="form-select" name="correct_answer" required>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Question</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <ul class="nav nav-pills">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if not current_category }}" href="{{ url_for('admin.questions') }}">All</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if current_category == 'aptitude' }}" href="{{ url_for('admin.questions', category='aptitude') }}">Aptitude</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if current_category == 'coding' }}" href="{{ url_for('admin.questions', category='coding') }}">Coding</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if current_category == 'core' }}" href="{{ url_for('admin.questions', category='core') }}">Core</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Questions Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Category</th>
+                    <th>Difficulty</th>
+                    <th style="width: 40%">Text</th>
+                    <th>Correct Answer</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in questions %}
+                <tr>
+                    <td>{{ q.id }}</td>
+                    <td><span class="badge bg-secondary">{{ q.category|capitalize }}</span></td>
+                    <td>{{ q.difficulty|capitalize }}</td>
+                    <td>{{ q.text[:50] }}...</td>
+                    <td><strong>{{ q.correct_answer }}</strong></td>
+                    <td>
+                        <form action="{{ url_for('admin.delete_question', id=q.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this question?');">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">No questions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
