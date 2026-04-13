@@ -44,6 +44,9 @@
                 <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">Analytics</a>
                 </li>
+                <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('resume.index') }}">Resume Analyzer</a>
+                </li>
             {% elif current_user.role == 'admin' %}
                 <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a>

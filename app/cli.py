@@ -189,3 +189,31 @@ def question_stats():
     click.echo(f"\n--- Question Stats ---")
     click.echo(f"Total questions: {total}")
     click.echo("----------------------\n")
+
+@cli_bp.cli.command('seed-data')
+@with_appcontext
+def seed_data():
+    """Seed initial data like companies."""
+    from app.models import Company
+    
+    companies = [
+        {"name": "TCS", "domain": "service", "difficulty": "Easy", "avg_ctc_lpa": 3.5},
+        {"name": "Infosys", "domain": "service", "difficulty": "Easy", "avg_ctc_lpa": 3.6},
+        {"name": "Wipro", "domain": "service", "difficulty": "Easy", "avg_ctc_lpa": 3.4},
+        {"name": "Accenture", "domain": "service", "difficulty": "Medium", "avg_ctc_lpa": 4.5},
+        {"name": "Cognizant", "domain": "service", "difficulty": "Medium", "avg_ctc_lpa": 4.2},
+        {"name": "HCL", "domain": "service", "difficulty": "Easy", "avg_ctc_lpa": 3.3},
+        {"name": "Amazon", "domain": "product", "difficulty": "Hard", "avg_ctc_lpa": 18.0},
+        {"name": "Google", "domain": "product", "difficulty": "Hard", "avg_ctc_lpa": 30.0},
+        {"name": "Microsoft", "domain": "product", "difficulty": "Hard", "avg_ctc_lpa": 22.0},
+        {"name": "Flipkart", "domain": "product", "difficulty": "Hard", "avg_ctc_lpa": 16.0}
+    ]
+    
+    for c_data in companies:
+        existing = Company.query.filter_by(name=c_data['name']).first()
+        if not existing:
+            company = Company(**c_data)
+            db.session.add(company)
+            
+    db.session.commit()
+    click.echo("Seeded 10 companies successfully.")

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Resume History{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Resume History</h2>
+        <a href="/resume/" class="btn btn-primary fw-bold">+ Upload New</a>
+    </div>
+
+    {% if not resumes %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center p-5">
+                <p class="mb-3 text-muted">No resumes uploaded yet.</p>
+                <a href="/resume/" class="btn btn-outline-primary">Analyze your first resume</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-4">#</th>
+                            <th scope="col">Uploaded</th>
+                            <th scope="col">Filename</th>
+                            <th scope="col">Score</th>
+                            <th scope="col">Skills Found</th>
+                            <th scope="col" class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in resumes %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted">{{ loop.index }}</td>
+                            <td>{{ r.uploaded_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+                            <td><span class="text-truncate d-inline-block" style="max-width: 200px;">{{ r.filename }}</span></td>
+                            <td>
+                                <span class="badge {% if r.score >= 70 %}bg-success{% elif r.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill px-3 py-2">
+                                    {{ r.score }} / 100
+                                </span>
+                            </td>
+                            <td>{{ r.extracted_skills|length }} / 27</td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-outline-info fw-bold btn-sm" onclick="loadDetail({{ r.id }})">
+                                    Details
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="detailModalLabel">Resume Analysis Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="modalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadDetail(resumeId) {
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        document.getElementById('modalBody').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+        modal.show();
+        
+        fetch(`/resume/${resumeId}/detail`)
+            .then(r => r.json())
+            .then(data => {
+                const matched = data.extracted_skills.map(s => `<span class="badge bg-success me-1 mb-1 p-2">${s}</span>`).join('');
+                const missing = data.missing_skills.map(s => `<span class="badge bg-danger me-1 mb-1 p-2">${s}</span>`).join('');
+                const suggestions = data.suggestions.map(s => `<li class="list-group-item px-0 border-0 py-1"><i class="bi bi-check2 text-info me-2"></i>${s}</li>`).join('');
+                
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="mb-4">
+                        <h6 class="text-muted text-uppercase small fw-bold">File Information</h6>
+                        <p class="mb-1"><strong>Name:</strong> ${data.filename}</p>
+                        <p class="mb-0"><strong>Analyzed On:</strong> ${data.uploaded_at}</p>
+                    </div>
+                    <div class="mb-4 d-flex justify-content-between align-items-center bg-light p-3 rounded">
+                        <h6 class="text-muted text-uppercase small fw-bold mb-0">Overall Score</h6>
+                        <h3 class="mb-0 fw-bold ${data.score >= 70 ? 'text-success' : data.score >= 40 ? 'text-warning' : 'text-danger'}">${data.score} <span class="fs-6 text-muted">/ 100</span></h3>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <h6 class="text-success text-uppercase small fw-bold mb-2">Matched Skills</h6>
+                            <div>${matched || '<span class="text-muted">None detected</span>'}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-danger text-uppercase small fw-bold mb-2">Missing Skills</h6>
+                            <div>${missing || '<span class="text-muted">None</span>'}</div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h6 class="text-info text-uppercase small fw-bold mb-2">Suggestions for Improvement</h6>
+                        <ul class="list-group list-group-flush">
+                            ${suggestions || '<li class="list-group-item text-muted">No suggestions. Your resume looks great!</li>'}
+                        </ul>
+                    </div>
+                `;
+            })
+            .catch(() => {
+                document.getElementById('modalBody').innerHTML = '<div class="alert alert-danger m-3">Failed to load details. Please try again later.</div>';
+            });
+    }
+</script>
+{% endblock %}

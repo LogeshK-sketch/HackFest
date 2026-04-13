@@ -70,3 +70,51 @@ class StudyTask(db.Model):
     due_date = db.Column(db.DateTime, nullable=True)
     is_completed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Resume(db.Model):
+    __tablename__ = 'resume'
+    id            = db.Column(db.Integer, primary_key=True)
+    user_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    uploaded_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    filename      = db.Column(db.String(200))
+    score         = db.Column(db.Integer, default=0)
+    extracted_skills = db.Column(db.Text)   # JSON list
+    missing_skills   = db.Column(db.Text)   # JSON list
+    suggestions      = db.Column(db.Text)   # JSON list
+
+class Company(db.Model):
+    __tablename__ = 'company'
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String(100), nullable=False)
+    domain      = db.Column(db.String(20))  # 'service' or 'product'
+    difficulty  = db.Column(db.String(10))  # Easy/Medium/Hard
+    avg_ctc_lpa = db.Column(db.Float, default=0.0)
+    focus_topics= db.Column(db.Text)        # JSON list
+
+class CompanyQuestion(db.Model):
+    __tablename__ = 'company_question'
+    id         = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
+    question   = db.Column(db.Text, nullable=False)
+    answer     = db.Column(db.Text)
+    difficulty = db.Column(db.String(10))
+    category   = db.Column(db.String(50))
+
+class Leaderboard(db.Model):
+    __tablename__ = 'leaderboard'
+    id           = db.Column(db.Integer, primary_key=True)
+    user_id      = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
+    total_score  = db.Column(db.Integer, default=0)
+    tests_taken  = db.Column(db.Integer, default=0)
+    badge        = db.Column(db.String(20), default='Beginner')
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    user         = db.relationship('User', backref='leaderboard_entry')
+
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'))
+    message    = db.Column(db.Text)
+    is_read    = db.Column(db.Boolean, default=False)
+    type       = db.Column(db.String(30))  # info/warning/success
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}Resume Analyzer{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Resume Analyzer</h2>
+            <p class="text-muted">Upload your PDF resume to get a score and skill gap analysis.</p>
+        </div>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div id="dropZone" class="border border-secondary border-dashed rounded p-5 text-center" style="border-style: dashed; cursor: pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-file-earmark-pdf text-secondary mb-3" viewBox="0 0 16 16">
+                  <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                  <path d="M4.603 14.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .471.236c.09.112.145.256.145.412 0 .515-.158 1.146-.411 1.833-.12.32-.239.63-.357.94-.092.242-.18.472-.266.691.134.394.275.788.423 1.183.19.508.384 1.01.597 1.498.13.298.261.593.404.883.467.947 1.03 1.874 1.696 2.723.197.25.4.498.608.739.208.24.423.473.649.694.448.435.918.823 1.41 1.147.247.163.504.305.772.417.266.111.545.195.836.242.4.065.773-.021 1.08-.256.295-.226.516-.549.624-.925.109-.379.11-.795-.015-1.205-.125-.41-.358-.78-.667-1.077-.31-.297-.68-.535-1.083-.71-.402-.175-.83-.284-1.266-.328a6.38 6.38 0 0 0-1.196.012c-.394.045-.788.131-1.168.257-.38.125-.747.288-1.09.482-.693.388-1.312.898-1.83 1.503-.1.118-.198.238-.292.36-.093.123-.183.248-.268.375-.689.99-1.226 2.08-1.579 3.238-.172.565-.306 1.146-.39 1.737-.091.642-.089 1.286-.002 1.918.172 1.238.647 2.404 1.344 3.42.345.503.743.967 1.187 1.385s.931.782 1.455.108 2.012.213 2.502.264 2.97.025 3.426.042c.31-.101.62-.218.92-.355.201-.09.398-.188.588-.296a6.83 6.83 0 0 0 .546-.34c.162-.116.315-.246.456-.39a6.83 6.83 0 0 0 .542-.647c.29-.408.528-.845.71-1.309.282-.724.423-1.493.423-2.27 0-.776-.14-1.545-.423-2.269a6.35 6.35 0 0 0-.71-1.309 6.82 6.82 0 0 0-.542-.647c-.141-.144-.294-.274-.456-.39a6.83 6.83 0 0 0-.546-.34c-.19-.108-.387-.206-.588-.296-.3-.137-.61-.254-.92-.355-.456-.149-.924-.265-1.402-.346-.49-.081-1.047-.156-1.547-.193-.524-.039-1.011.026-1.455.108-.444.083-.842.226-1.187.385-.697.323-1.172.825-1.344 1.42-.087.301-.089.626-.002.955.18.665.488 1.286.911 1.83l.006.009-.009.006c-.544.423-1.165.73-1.83.911-.329.087-.654.085-.955-.002-.595-.172-1.097-.647-1.42-1.344-.159-.345-.302-.743-.385-1.187a6.38 6.38 0 0 1-.108-1.455c.037-.5.112-1.057.193-1.547.081-.478.197-.946.346-1.402.101-.31.218-.62.355-.92.09-.201.188-.398.296-.588.115-.198.24-.388.375-.566s.28-.344.437-.497c.365-.353.784-.652 1.25-.86.518-.231 1.056-.407 1.62-.511.53-.1.1.066.071.183.003.882.355 1.701.373 2.508.016.745.161 1.457.411 2.129s.584 1.299.96 1.895a6.68 6.68 0 0 0 1.2 1.564c-.2-.054-.396-.118-.588-.194z"/>
+                </svg>
+                <h5 class="mb-1">Drag your PDF here or click to browse</h5>
+                <p class="text-secondary small mb-0">Max 5 MB &middot; PDF only</p>
+                <input type="file" id="resumeFile" accept=".pdf" class="d-none">
+            </div>
+
+            <div class="mt-3 text-center">
+                <span id="selectedFile" class="text-success fw-bold"></span>
+            </div>
+
+            <div class="mt-4 text-center">
+                <button type="button" id="analyzeBtn" class="btn btn-primary px-4 py-2 text-uppercase fw-bold shadow-sm" disabled>
+                    Analyze Resume
+                </button>
+            </div>
+
+            <div id="progressWrap" class="mt-4 d-none w-75 mx-auto">
+                <div class="progress" style="height: 20px;">
+                    <div id="uploadProgress" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%"></div>
+                </div>
+                <p class="text-center text-muted small mt-2" id="progressText">Uploading and analyzing...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="errorAlert" class="alert alert-danger d-none shadow-sm" role="alert"></div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="d-none">
+        <!-- Score Card Row -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                 <div class="card shadow-sm h-100">
+                     <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                         <div style="width: 160px; height: 160px; position: relative">
+                             <canvas id="scoreChart"></canvas>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h4 class="card-title text-muted fw-bold">Overall Score</h4>
+                        <div class="mb-2">
+                             <span id="scoreLabel" class="badge rounded-pill fs-5 p-2"></span>
+                        </div>
+                        <p id="scoreDesc" class="mb-0 text-secondary"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Row -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <div class="card shadow-sm h-100 border-success">
+                    <div class="card-header bg-success text-white fw-bold">
+                        Matched Skills
+                    </div>
+                    <div class="card-body" id="matchedBadges">
+                        <!-- badges go here -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm h-100 border-danger">
+                    <div class="card-header bg-danger text-white fw-bold">
+                        Missing Skills
+                    </div>
+                    <div class="card-body" id="missingBadges">
+                        <!-- badges go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestions Card -->
+        <div class="card shadow-sm border-info">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center fw-bold">
+                Suggested Improvements
+                <a href="/resume/history" class="btn btn-sm btn-light text-info fw-bold">View History</a>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush" id="suggestionsList">
+                    <!-- suggestions go here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const resumeFile = document.getElementById('resumeFile');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const selectedFile = document.getElementById('selectedFile');
+    
+    // UI elements
+    const progressWrap = document.getElementById('progressWrap');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const resultsSection = document.getElementById('resultsSection');
+    const errorAlert = document.getElementById('errorAlert');
+    
+    // Results elements
+    const scoreLabel = document.getElementById('scoreLabel');
+    const scoreDesc = document.getElementById('scoreDesc');
+    const matchedBadges = document.getElementById('matchedBadges');
+    const missingBadges = document.getElementById('missingBadges');
+    const suggestionsList = document.getElementById('suggestionsList');
+
+    let currentChart = null;
+
+    dropZone.addEventListener('dragover', e => { 
+        e.preventDefault(); 
+        dropZone.style.background='#f8f9fa'; 
+    });
+    
+    dropZone.addEventListener('dragleave', () => { 
+        dropZone.style.background=''; 
+    });
+    
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault(); 
+        dropZone.style.background='';
+        const file = e.dataTransfer.files[0];
+        if (file) { 
+            resumeFile.files = e.dataTransfer.files; 
+            handleFileSelect(file); 
+        }
+    });
+    
+    dropZone.addEventListener('click', () => resumeFile.click());
+    resumeFile.addEventListener('change', () => {
+        if(resumeFile.files.length > 0) handleFileSelect(resumeFile.files[0]);
+    });
+
+    function handleFileSelect(file) {
+        selectedFile.textContent = 'Selected: ' + file.name;
+        analyzeBtn.disabled = false;
+        errorAlert.classList.add('d-none');
+        resultsSection.classList.add('d-none');
+    }
+
+    analyzeBtn.addEventListener('click', () => {
+        const file = resumeFile.files[0];
+        if(!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Setup initial progress
+        progressWrap.classList.remove('d-none');
+        analyzeBtn.disabled = true;
+        errorAlert.classList.add('d-none');
+        resultsSection.classList.add('d-none');
+        
+        let progress = 0;
+        uploadProgress.style.width = '0%';
+        
+        const progressInterval = setInterval(() => {
+            if (progress < 85) {
+                progress += Math.floor(Math.random() * 5) + 1;
+                uploadProgress.style.width = progress + '%';
+            }
+        }, 50);
+
+        fetch('/resume/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Upload failed');
+            }
+            return data;
+        })
+        .then(data => {
+            clearInterval(progressInterval);
+            uploadProgress.style.width = '100%';
+            
+            setTimeout(() => {
+                progressWrap.classList.add('d-none');
+                showResults(data);
+                resultsSection.classList.remove('d-none');
+                analyzeBtn.disabled = false; // re-enable for next time if needed
+            }, 400);
+        })
+        .catch(err => {
+            clearInterval(progressInterval);
+            progressWrap.classList.add('d-none');
+            errorAlert.textContent = err.message;
+            errorAlert.classList.remove('d-none');
+            analyzeBtn.disabled = false;
+        });
+    });
+
+    function showResults(data) {
+        // Clear old results
+        matchedBadges.innerHTML = '';
+        missingBadges.innerHTML = '';
+        suggestionsList.innerHTML = '';
+
+        const score = data.score;
+        let colour = score >= 70 ? '#198754' : score >= 40 ? '#fd7e14' : '#dc3545';
+        let label = score >= 70 ? 'Excellent' : score >= 40 ? 'Good' : 'Needs Work';
+        let bgClass = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning text-dark' : 'bg-danger';
+        
+        scoreLabel.textContent = label;
+        scoreLabel.className = `badge rounded-pill fs-5 p-2 ${bgClass}`;
+        
+        if(score >= 70) {
+            scoreDesc.textContent = "Your resume is looking great and covers major technical keywords!";
+        } else if(score >= 40) {
+             scoreDesc.textContent = "Good start, but adding more specific skills will help you stand out.";
+        } else {
+             scoreDesc.textContent = "Needs improvement. Review the missing skills below and update your resume.";
+        }
+
+        if(currentChart) currentChart.destroy();
+
+        currentChart = new Chart(document.getElementById('scoreChart'), {
+            type: 'doughnut',
+            data: { 
+                datasets: [{
+                    data: [score, Math.max(0, 100 - score)],
+                    backgroundColor: [colour, '#e9ecef'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '75%',
+                plugins: { 
+                    legend: { display: false },
+                    centerText: { display: true, text: score }
+                },
+                animation: { duration: 800 }
+            },
+            plugins: [{
+                id: 'centerText',
+                afterDraw(chart) {
+                    const {ctx, chartArea:{top,width,height}} = chart;
+                    ctx.save();
+                    ctx.font = 'bold 28px sans-serif';
+                    ctx.fillStyle = chart.config.options.plugins.centerText.text >= 70
+                        ? '#198754' : chart.config.options.plugins.centerText.text >= 40
+                        ? '#fd7e14' : '#dc3545';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(chart.config.options.plugins.centerText.text, width/2, top + height/2);
+                    ctx.restore();
+                }
+            }]
+        });
+
+        data.matched.forEach(s => {
+            matchedBadges.innerHTML += `<span class="badge bg-success me-2 mb-2 p-2">${s}</span>`;
+        });
+        
+        data.missing.forEach(s => {
+            missingBadges.innerHTML += `<span class="badge bg-danger me-2 mb-2 p-2">${s}</span>`;
+        });
+
+        data.suggestions.forEach(s => {
+            suggestionsList.innerHTML += `<li class="list-group-item"><i class="bi bi-arrow-right-short text-info fw-bold"></i> ${s}</li>`;
+        });
+    }
+</script>
+{% endblock %}
