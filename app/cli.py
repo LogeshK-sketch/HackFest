@@ -9,73 +9,153 @@ from sqlalchemy import func
 cli_bp = Blueprint('cli', __name__, cli_group=None)
 
 @cli_bp.cli.command('seed-questions')
+@click.option('--file', 'csv_file', default=None,
+              help='Path to specific CSV file to load.')
+@click.option('--category', 'force_category', default=None,
+              help='Force all loaded questions into this category.')
 @with_appcontext
-def seed_questions():
+def seed_questions(csv_file, force_category):
     """
-    Reads data/aptitude_questions.csv using load_and_clean_questions(),
-    validates each row with validate_question(),
-    inserts into DB skipping duplicates (check by question_text),
-    prints final count: inserted / skipped / failed with reasons.
-    Wraps everything in a try/except — on any fatal error, 
-    rolls back and prints the error clearly.
+    Loads questions from one or more CSV files into the database.
     """
-    from data.load_dataset import load_and_clean_questions, validate_question
+    from data.load_dataset import load_and_clean_questions_v2, validate_question
+    ALLOWED_CATEGORIES = ['aptitude', 'coding', 'core', 'logical', 'numerical', 'verbal']
     
-    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'aptitude_questions.csv')
-    if not os.path.exists(csv_path):
-        click.echo(f"Error: Could not find CSV at {csv_path}")
-        return
-
-    try:
-        data = load_and_clean_questions(csv_path)
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    
+    files_to_load = []
+    if csv_file:
+        files_to_load.append((csv_file, None))
+    else:
+        files_to_load = [
+            (os.path.join(base_dir, 'data', 'aptitude_questions.csv'), None),
+            (os.path.join(base_dir, 'data', 'coding_questions.csv'), 'coding'),
+            (os.path.join(base_dir, 'data', 'core_questions.csv'), 'core')
+        ]
         
-        inserted = 0
-        skipped = 0
-        failed = 0
-        failure_reasons = {}
-        
-        batch = []
-        batch_size = 100
-        
-        for row in data:
-            is_valid, reason = validate_question(row)
-            if not is_valid:
-                failed += 1
-                failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
-                continue
-                
-            # Check for duplicate
-            exists = Question.query.filter_by(question_text=row['question_text']).first()
-            if exists:
-                skipped += 1
-                continue
-                
-            q = Question(**row)
-            batch.append(q)
-            inserted += 1
+    total_files_processed = 0
+    total_inserted = 0
+    total_skipped = 0
+    total_failed = 0
+    cat_counts = {c: 0 for c in ALLOWED_CATEGORIES}
+    
+    for fpath, default_cat in files_to_load:
+        if not os.path.exists(fpath):
+            click.echo(f"Warning: Skipping {fpath} - File not found.")
+            continue
             
-            if len(batch) >= batch_size:
+        click.echo(f"\nProcessing {fpath}...")
+        try:
+            data = load_and_clean_questions_v2(fpath, default_cat or 'aptitude')
+            batch = []
+            
+            for row in data:
+                if force_category and force_category in ALLOWED_CATEGORIES:
+                    row['category'] = force_category
+                    
+                is_valid, reason = validate_question(row)
+                if not is_valid:
+                    total_failed += 1
+                    continue
+                    
+                # Duplicate check
+                exists = Question.query.filter(Question.question_text.ilike(row['question_text'])).first()
+                if exists:
+                    total_skipped += 1
+                    continue
+                    
+                q = Question(**row)
+                batch.append(q)
+                total_inserted += 1
+                cat_counts[row['category']] = cat_counts.get(row['category'], 0) + 1
+                
+                if len(batch) >= 100:
+                    db.session.add_all(batch)
+                    db.session.commit()
+                    batch.clear()
+                    
+            if batch:
                 db.session.add_all(batch)
                 db.session.commit()
-                batch = []
                 
-        # Insert remaining
-        if batch:
-            db.session.add_all(batch)
-            db.session.commit()
+            total_files_processed += 1
             
-        click.echo(f"\nFinal Count:")
-        click.echo(f"Inserted: {inserted}")
-        click.echo(f"Skipped (duplicates): {skipped}")
-        click.echo(f"Failed (validation error): {failed}")
-        if failure_reasons:
-            click.echo("Failure reasons:")
-            for reason, count in failure_reasons.items():
-                click.echo(f"  - {reason}: {count}")
+        except Exception as e:
+            db.session.rollback()
+            click.echo(f"Error processing {fpath}: {str(e)}")
+            continue
+            
+    click.echo(f"\n===== FINAL SUMMARY =====")
+    click.echo(f"Files processed: {total_files_processed}")
+    click.echo(f"Total inserted: {total_inserted}")
+    click.echo(f"Total skipped (duplicates): {total_skipped}")
+    click.echo(f"Total failed (validation): {total_failed}")
+    click.echo(f"Questions per category:")
+    for c, count in cat_counts.items():
+        if count > 0:
+            click.echo(f"  {c}: {count}")
 
-    except Exception as e:
-        db.session.rollback()
-        click.echo(f"Fatal error during seeding: {str(e)}")
+@cli_bp.cli.command('seed-coding')
+@with_appcontext
+def seed_coding():
+    """
+    Shortcut: loads only data/coding_questions.csv.
+    Equivalent to: flask seed-questions --file data/coding_questions.csv
+    """
+    from flask.cli import run_command
+    import sys
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    csv_file = os.path.join(base_dir, 'data', 'coding_questions.csv')
+    os.system(f"flask seed-questions --file {csv_file}")
+
+
+@cli_bp.cli.command('seed-core')
+@with_appcontext
+def seed_core():
+    """
+    Shortcut: loads only data/core_questions.csv.
+    Equivalent to: flask seed-questions --file data/core_questions.csv
+    """
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    csv_file = os.path.join(base_dir, 'data', 'core_questions.csv')
+    os.system(f"flask seed-questions --file {csv_file}")
+
+
+@cli_bp.cli.command('category-stats')
+@with_appcontext
+def category_stats():
+    """
+    Prints a formatted table to terminal:
+    ┌──────────────┬──────┬────────┬────────┐
+    ...
+    """
+    ALLOWED_CATEGORIES = ['aptitude', 'coding', 'core', 'logical', 'numerical', 'verbal']
+    
+    stats = {cat: {'easy': 0, 'medium': 0, 'hard': 0} for cat in ALLOWED_CATEGORIES}
+    
+    results = db.session.query(Question.category, Question.difficulty, func.count(Question.id)).group_by(Question.category, Question.difficulty).all()
+    
+    for cat, diff, count in results:
+        if cat in stats and diff in stats[cat]:
+            stats[cat][diff] = count
+            
+    click.echo("┌──────────────┬──────┬────────┬────────┐")
+    click.echo("│ Category     │ Easy │ Medium │  Hard  │")
+    click.echo("├──────────────┼──────┼────────┼────────┤")
+    
+    total_easy, total_med, total_hard = 0, 0, 0
+    for cat in ALLOWED_CATEGORIES:
+        e = stats[cat]['easy']
+        m = stats[cat]['medium']
+        h = stats[cat]['hard']
+        total_easy += e
+        total_med += m
+        total_hard += h
+        click.echo(f"│ {cat.ljust(12)} │ {str(e).center(4)} │ {str(m).center(6)} │ {str(h).center(6)} │")
+        
+    click.echo("├──────────────┼──────┼────────┼────────┤")
+    click.echo(f"│ TOTAL        │ {str(total_easy).center(4)} │ {str(total_med).center(6)} │ {str(total_hard).center(6)} │")
+    click.echo("└──────────────┴──────┴────────┴────────┘")
 
 
 @cli_bp.cli.command('clear-questions')
@@ -83,9 +163,6 @@ def seed_questions():
 def clear_questions():
     """
     Deletes all rows from the question table.
-    Asks for confirmation: 'Are you sure? (yes/no): '
-    Only proceeds if user types 'yes'.
-    Prints count of deleted rows.
     """
     confirm = input("Are you sure? (yes/no): ")
     if confirm.strip().lower() == 'yes':
@@ -103,14 +180,7 @@ def clear_questions():
 @cli_bp.cli.command('question-stats')
 @with_appcontext
 def question_stats():
-    """
-    Prints a summary table to terminal:
-    - Total questions in DB
-    - Count per category
-    - Count per difficulty
-    - Count per category+difficulty combination
-    Uses only SQLAlchemy queries, no pandas.
-    """
+    """Legacy command, replaced mostly by category-stats"""
     total = Question.query.count()
     if total == 0:
         click.echo("No questions found in database.")
@@ -118,19 +188,4 @@ def question_stats():
         
     click.echo(f"\n--- Question Stats ---")
     click.echo(f"Total questions: {total}")
-    
-    click.echo(f"\nCount per category:")
-    cats = db.session.query(Question.category, func.count(Question.id)).group_by(Question.category).all()
-    for cat, count in cats:
-        click.echo(f"  {cat}: {count}")
-        
-    click.echo(f"\nCount per difficulty:")
-    diffs = db.session.query(Question.difficulty, func.count(Question.id)).group_by(Question.difficulty).all()
-    for diff, count in diffs:
-        click.echo(f"  {diff}: {count}")
-        
-    click.echo(f"\nCount per category+difficulty:")
-    combos = db.session.query(Question.category, Question.difficulty, func.count(Question.id)).group_by(Question.category, Question.difficulty).all()
-    for cat, diff, count in combos:
-        click.echo(f"  {cat} - {diff}: {count}")
     click.echo("----------------------\n")

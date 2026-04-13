@@ -16,93 +16,168 @@
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-center h-100 border-primary">
-            <div class="card-body">
-                <h5 class="card-title text-primary">Aptitude Score</h5>
-                <h2 class="display-4">{{ "%.1f"|format(current_user.aptitude_score) }}%</h2>
+<div class="row style='mb-4'">
+    <!-- Score Cards -->
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm {% if aptitude_score >= 70 %}border-success{% elif aptitude_score >= 40 %}border-warning{% else %}border-danger{% endif %} border-2">
+            <div class="card-body text-center">
+                <h5 class="card-title fs-3 mb-3">📐 Aptitude Score</h5>
+                {% if test_counts.aptitude == 0 %}
+                    <h2 class="display-4 text-muted mb-0">--</h2>
+                    <p class="text-muted mt-2">No attempts yet</p>
+                {% else %}
+                    <h2 class="display-4 fw-bold {% if aptitude_score >= 70 %}text-success{% elif aptitude_score >= 40 %}text-warning{% else %}text-danger{% endif %}">{{ aptitude_score }}%</h2>
+                    <p class="text-muted small mt-2 mb-2">Based on last 5 tests</p>
+                    <span class="badge bg-light text-dark border">{{ test_counts.aptitude }} tests taken</span>
+                {% endif %}
+                <div class="mt-4">
+                    <a href="/assessment/test?category=aptitude" class="btn btn-outline-primary w-100">Take Aptitude Test</a>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-center h-100 border-success">
-            <div class="card-body">
-                <h5 class="card-title text-success">Coding Score</h5>
-                <h2 class="display-4">{{ "%.1f"|format(current_user.coding_score) }}%</h2>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm {% if coding_score >= 70 %}border-success{% elif coding_score >= 40 %}border-warning{% else %}border-danger{% endif %} border-2">
+            <div class="card-body text-center">
+                <h5 class="card-title fs-3 mb-3">💻 Coding Score</h5>
+                {% if test_counts.coding == 0 %}
+                    <h2 class="display-4 text-muted mb-0">--</h2>
+                    <p class="text-muted mt-2">No attempts yet</p>
+                {% else %}
+                    <h2 class="display-4 fw-bold {% if coding_score >= 70 %}text-success{% elif coding_score >= 40 %}text-warning{% else %}text-danger{% endif %}">{{ coding_score }}%</h2>
+                    <p class="text-muted small mt-2 mb-2">Based on last 5 tests</p>
+                    <span class="badge bg-light text-dark border">{{ test_counts.coding }} tests taken</span>
+                {% endif %}
+                <div class="mt-4">
+                    {% if question_counts.coding == 0 %}
+                        <span class="badge bg-warning text-dark w-100 py-2">No questions loaded</span>
+                        <button disabled class="btn btn-outline-secondary w-100 mt-2">Take Coding Test</button>
+                    {% else %}
+                        <a href="/assessment/test?category=coding" class="btn btn-outline-primary w-100">Take Coding Test</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-center h-100 border-info">
-            <div class="card-body">
-                <h5 class="card-title text-info">Core Score</h5>
-                <h2 class="display-4">{{ "%.1f"|format(current_user.core_score) }}%</h2>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm {% if core_score >= 70 %}border-success{% elif core_score >= 40 %}border-warning{% else %}border-danger{% endif %} border-2">
+            <div class="card-body text-center">
+                <h5 class="card-title fs-3 mb-3">🖥️ Core Score</h5>
+                {% if test_counts.core == 0 %}
+                    <h2 class="display-4 text-muted mb-0">--</h2>
+                    <p class="text-muted mt-2">No attempts yet</p>
+                {% else %}
+                    <h2 class="display-4 fw-bold {% if core_score >= 70 %}text-success{% elif core_score >= 40 %}text-warning{% else %}text-danger{% endif %}">{{ core_score }}%</h2>
+                    <p class="text-muted small mt-2 mb-2">Based on last 5 tests</p>
+                    <span class="badge bg-light text-dark border">{{ test_counts.core }} tests taken</span>
+                {% endif %}
+                <div class="mt-4">
+                    {% if question_counts.core == 0 %}
+                        <span class="badge bg-warning text-dark w-100 py-2">No questions loaded</span>
+                        <button disabled class="btn btn-outline-secondary w-100 mt-2">Take Core Test</button>
+                    {% else %}
+                        <a href="/assessment/test?category=core" class="btn btn-outline-primary w-100">Take Core Test</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Readiness Banner -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% if readiness_label == 'High' %}
+            <div class="alert alert-success fs-5 text-center mb-0 shadow-sm">
+                🎯 Placement Readiness: High — You're well prepared!
+            </div>
+        {% elif readiness_label == 'Medium' %}
+            <div class="alert alert-warning fs-5 text-center mb-0 shadow-sm">
+                📈 Placement Readiness: Medium — Keep practicing!
+            </div>
+        {% elif readiness_label == 'Low' %}
+            <div class="alert alert-danger fs-5 text-center mb-0 shadow-sm">
+                📚 Placement Readiness: Low — Focus on weak areas.
+            </div>
+        {% else %}
+            <div class="alert alert-info fs-5 text-center mb-0 shadow-sm">
+                ℹ️ Take tests in all 3 categories to see your readiness level.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-8">
-        <div class="card">
+        <div class="card shadow-sm border-0">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Assessments</h5>
+                <h5 class="mb-0 fw-bold">Recent Assessments</h5>
                 <a href="{{ url_for('assessment.index') }}" class="btn btn-sm btn-primary">Take Test</a>
             </div>
             <div class="card-body p-0">
                 {% if recent_tests %}
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>Date</th>
                             <th>Category</th>
                             <th>Score</th>
+                            <th>Correct / Total</th>
                             <th>Time</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for test in recent_tests %}
+                        {% for attempt in recent_tests %}
                         <tr>
-                            <td>{{ test.attempted_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td><span class="badge bg-secondary">{{ test.category|capitalize }}</span></td>
-                            <td>{{ "%.1f"|format(test.score) }}%</td>
-                            <td>{{ test.time_taken // 60 }}m {{ test.time_taken % 60 }}s</td>
+                            <td>{{ attempt.attempted_at.strftime('%d %b %Y, %H:%M') }}</td>
+                            <td>
+                                {% set badge_class = 'bg-primary' %}
+                                {% if attempt.category == 'coding' %}
+                                    {% set badge_class = 'bg-success' %}
+                                {% elif attempt.category == 'core' %}
+                                    {% set badge_class = 'bg-warning text-dark' %}
+                                {% endif %}
+                                <span class="badge {{ badge_class }} px-2 py-1">{{ attempt.category|capitalize }}</span>
+                            </td>
+                            <td>
+                                {% if attempt.score >= 70 %}
+                                    <span class="text-success fw-bold">{{ attempt.score }}%</span>
+                                {% elif attempt.score >= 40 %}
+                                    <span class="text-warning fw-bold">{{ attempt.score }}%</span>
+                                {% else %}
+                                    <span class="text-danger fw-bold">{{ attempt.score }}%</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ attempt.correct_answers }} / {{ attempt.total_questions }}</td>
+                            <td>{{ attempt.time_taken | format_seconds }}</td>
+                            <td>
+                                <a href="{{ url_for('assessment.result', attempt_id=attempt.id) }}" class="btn btn-sm btn-outline-secondary">Review</a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 {% else %}
-                <div class="text-center p-4">
-                    <p class="text-muted">No tests taken yet. Start assessing yourself now!</p>
+                <div class="text-center p-5">
+                    <p class="text-muted fs-5">No tests taken yet. <a href="{{ url_for('assessment.index') }}">Take your first test</a></p>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
+    
     <div class="col-md-4">
-        <div class="card">
+        <div class="card shadow-sm border-0">
             <div class="card-header bg-white">
-                <h5 class="mb-0">Placement Readiness Model</h5>
+                <h5 class="mb-0 fw-bold">Prediction Request</h5>
             </div>
             <div class="card-body text-center">
-                <p>Use our ML model to predict your current readiness level based on your scores.</p>
-                
-                {% if latest_prediction %}
-                <div class="mb-3">
-                    <h6>Last Prediction: <span class="text-primary">{{ latest_prediction.predicted_at.strftime('%Y-%m-%d') }}</span></h6>
-                    <ul class="list-unstyled">
-                        <li>Level: <strong>{{ latest_prediction.readiness_level }}</strong></li>
-                        <li>Confidence: <strong>{{ "%.1f"|format(latest_prediction.confidence_score) }}%</strong></li>
-                    </ul>
-                    <div class="progress" style="height: 20px;">
-                        <div class="progress-bar {{ 'bg-success' if latest_prediction.readiness_level == 'High' else 'bg-warning' if latest_prediction.readiness_level == 'Medium' else 'bg-danger' }}" role="progressbar" style="width: {{ latest_prediction.confidence_score }}%;" aria-valuenow="{{ latest_prediction.confidence_score }}" aria-valuemin="0" aria-valuemax="100">{{ "%.1f"|format(latest_prediction.confidence_score) }}%</div>
-                    </div>
-                </div>
-                {% endif %}
-                
+                <p class="text-muted">Use our ML model to predict your current readiness level based on your scores dynamically.</p>
                 <form action="{{ url_for('ml.predict') }}" method="POST">
-                    <button type="submit" class="btn btn-outline-primary w-100">Run Prediction Now</button>
+                    <button type="submit" class="btn btn-primary w-100 py-2">Run ML Prediction Now</button>
                 </form>
             </div>
         </div>

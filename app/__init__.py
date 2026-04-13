@@ -45,6 +45,10 @@ def create_app(config_class=DevelopmentConfig):
     from app.cli import cli_bp
     app.register_blueprint(cli_bp)
 
+    # ADDED IMPORT: format_seconds filter
+    from app.utils import format_seconds
+    app.jinja_env.filters['format_seconds'] = format_seconds
+
     # Error handlers
     @app.errorhandler(403)
     def forbidden_error(error):

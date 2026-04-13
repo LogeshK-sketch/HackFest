@@ -129,7 +129,7 @@ def validate_question(row: dict) -> tuple[bool, str]:
         return False, f"Invalid correct_answer: {ans}"
         
     cat = row.get('category', '')
-    if cat not in ['aptitude', 'logical', 'verbal', 'numerical']:
+    if cat not in ['aptitude', 'coding', 'core', 'logical', 'verbal', 'numerical']:
         return False, f"Invalid category: {cat}"
         
     diff = row.get('difficulty', '')
@@ -137,3 +137,113 @@ def validate_question(row: dict) -> tuple[bool, str]:
         return False, f"Invalid difficulty: {diff}"
         
     return True, ""
+
+import click
+
+def detect_category(question_text: str) -> str:
+    """
+    Detects question category from question text using 
+    keyword matching. Returns one of ALLOWED_CATEGORIES.
+    Priority order: coding → core → numerical → logical 
+                    → verbal → aptitude (default)
+    """
+    q_text_lower = question_text.lower()
+    
+    coding_kws = ['algorithm', 'function', 'loop', 'array', 'pointer', 'class', 'object', 'compile', 'syntax', 'variable', 'recursion', 'stack', 'queue', 'linked list', 'binary', 'python', 'java', 'c++', 'javascript', 'output of', 'program', 'code', 'exception', 'inheritance', 'polymorphism', 'encapsulation', 'abstraction', 'sql', 'query', 'database', 'index', 'join']
+    if any(kw in q_text_lower for kw in coding_kws): return 'coding'
+    
+    core_kws = ['operating system', 'process', 'thread', 'semaphore', 'deadlock', 'memory', 'paging', 'scheduling', 'dbms', 'normalization', 'transaction', 'acid', 'network', 'protocol', 'tcp', 'ip', 'http', 'osi', 'router', 'bandwidth', 'latency', 'oop', 'design pattern', 'solid principle', 'system design', 'cache', 'virtual memory', 'file system', 'interrupt']
+    if any(kw in q_text_lower for kw in core_kws): return 'core'
+    
+    numerical_kws = ['ratio', 'percentage', 'profit', 'loss', 'interest', 'speed', 'time', 'distance', 'work', 'average', 'mean', 'median', 'mode', 'probability', 'permutation', 'combination', 'series', 'arithmetic', 'geometric', 'lcm', 'hcf', 'fraction', 'decimal', 'number']
+    if any(kw in q_text_lower for kw in numerical_kws): return 'numerical'
+
+    logical_kws = ['pattern', 'sequence', 'analogy', 'odd one', 'odd one out', 'coding decoding', 'direction', 'ranking', 'syllogism', 'blood relation', 'seating', 'arrangement', 'puzzle', 'matrix', 'series completion', 'figure', 'mirror image']
+    if any(kw in q_text_lower for kw in logical_kws): return 'logical'
+
+    verbal_kws = ['synonym', 'antonym', 'grammar', 'vocabulary', 'sentence', 'passage', 'comprehension', 'fill in the blank', 'idiom', 'phrase', 'spelling', 'one word', 'active voice', 'passive voice', 'tense', 'preposition']
+    if any(kw in q_text_lower for kw in verbal_kws): return 'verbal'
+    
+    return 'aptitude'
+
+def load_and_clean_questions_v2(csv_path: str, default_category: str = 'aptitude') -> list[dict]:
+    """
+    Enhanced loader that supports an optional 'category' column.
+    Dataset source: Kaggle – Engineering Aptitude Test Questions
+    Author: Keith Zidan Dsouza
+    """
+    ALLOWED_CATEGORIES = ['aptitude', 'coding', 'core', 'logical', 'numerical', 'verbal']
+    DIFFICULTY_LEVELS = ['easy', 'medium', 'hard']
+    
+    try:
+        df = pd.read_csv(csv_path, sep=None, engine='python')
+    except FileNotFoundError:
+        click.echo(f"Error: File not found - {csv_path}")
+        return []
+    except pd.errors.EmptyDataError:
+        click.echo(f"Error: File is empty - {csv_path}")
+        return []
+        
+    total_rows_read = len(df)
+    
+    df = df.rename(columns={
+        'Question': 'question_text',
+        'Option A': 'option_a',
+        'Option B': 'option_b',
+        'Option C': 'option_c',
+        'Option D': 'option_d',
+        'Answer': 'correct_answer',
+        'Category': 'category',
+        'Difficulty': 'difficulty'
+    }, errors='ignore')
+    
+    required_cols = ['question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
+    df = df.dropna(subset=required_cols)
+    for col in df.select_dtypes(['object', 'string']).columns:
+        df[col] = df[col].astype(str).str.strip()
+    
+    for col in required_cols:
+        df = df[df[col] != '']
+    
+    df = df.drop_duplicates(subset=['question_text'], keep='first')
+    
+    rows_before = len(df)
+    df['correct_answer'] = df['correct_answer'].str[0].str.upper()
+    df = df[df['correct_answer'].isin(['A', 'B', 'C', 'D'])]
+    dropped_at_normalization = rows_before - len(df)
+    if dropped_at_normalization > 0:
+        click.echo(f"Rows dropped due to invalid answer choices in {csv_path}: {dropped_at_normalization}")
+    
+    df = df.reset_index(drop=True)
+    
+    if 'category' in df.columns:
+        df['category'] = df['category'].str.strip().str.lower()
+        mask = ~df['category'].isin(ALLOWED_CATEGORIES)
+        df.loc[mask, 'category'] = df.loc[mask, 'question_text'].apply(detect_category)
+    else:
+        df['category'] = df['question_text'].apply(detect_category)
+        
+    if 'difficulty' in df.columns:
+        df['difficulty'] = df['difficulty'].str.strip().str.lower()
+        df.loc[~df['difficulty'].isin(DIFFICULTY_LEVELS), 'difficulty'] = 'medium'
+    else:
+        total_cleaned = len(df)
+        third = total_cleaned // 3
+        def get_difficulty(idx):
+            if idx < third: return 'easy'
+            elif idx < 2 * third: return 'medium'
+            else: return 'hard'
+        df['difficulty'] = [get_difficulty(i) for i in range(total_cleaned)]
+
+    result = df.to_dict(orient='records')
+    
+    click.echo(f"--- Summary for {csv_path} ---")
+    click.echo(f"Total rows read: {total_rows_read}")
+    click.echo(f"Rows after cleaning: {len(result)}")
+    click.echo(f"Rows dropped: {total_rows_read - len(result)}")
+    click.echo(f"Category distribution:\n{df['category'].value_counts().to_string()}")
+    click.echo(f"Difficulty distribution:\n{df['difficulty'].value_counts().to_string()}")
+    click.echo("-------------------------------")
+    
+    return result
+

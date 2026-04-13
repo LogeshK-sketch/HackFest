@@ -1,0 +1,31 @@
+Question,Option A,Option B,Option C,Option D,Answer,Category,Difficulty
+"What is the output of print(type([]))?","<class 'list'>","<class 'tuple'>","<class 'dict'>","<class 'set'>",A,coding,easy
+"Which keyword is used to define a function in Python?",def,func,define,function,A,coding,easy
+"What does the 'continue' statement do in a loop?","Exits the loop","Skips the rest of the current iteration","Throws an exception","Restarts the loop from the beginning",B,coding,easy
+"Which of the following is immutable in Python?",List,Dictionary,Set,Tuple,D,coding,easy
+"How do you create a variable with the numeric value 5 in Python?","x = int(5)","x == 5","x = 5","Both A and C are correct",D,coding,easy
+"What is the correct syntax to output ""Hello World"" in Python?","echo ""Hello World""","print(""Hello World"")","p(""Hello World"")","printf(""Hello World"")",B,coding,easy
+"How do you insert COMMENTS in Python code?","/* This is a comment */","// This is a comment","# This is a comment","<!-- This is a comment -->",C,coding,easy
+"Which collection is ordered, changeable, and allows duplicate members?",Set,Dictionary,Tuple,List,D,coding,easy
+"Which data structure uses LIFO (Last In First Out) principle?",Queue,Linked List,Stack,Tree,C,coding,medium
+"In an array of size N, what is the index of the last element?",N,N-1,N+1,0,B,coding,medium
+"What is the time complexity of searching an element in a balanced Binary Search Tree?",O(n),O(log n),O(n log n),O(1),B,coding,medium
+"Which scenario best describes a Queue?","A stack of plates","People waiting in a line","A browsing history","An undo operation in a text editor",B,coding,medium
+"What is a generic term for a node in a Linked List that points to nowhere?",Null,Void,Empty,None,A,coding,medium
+"Which of the following sorting algorithms has the best average-case time complexity?","Bubble Sort","Insertion Sort","Merge Sort","Selection Sort",C,coding,medium
+"What happens if you try to pop an element from an empty stack?",Underflow,Overflow,Garbage Collection,Segmentation Fault,A,coding,medium
+"Which data structure is primarily used to implement Breadth-First Search (BFS)?",Stack,Queue,Heaps,Hash Table,B,coding,medium
+"Which OOP concept hides internal implementation details?",Polymorphism,Inheritance,Encapsulation,Abstraction,C,coding,hard
+"What is it called when a child class implements a method with the same name as the parent class?",Overloading,Overriding,Abstraction,Encapsulation,B,coding,hard
+"Which of the following is NOT a pillar of Object-Oriented Programming?",Inheritance,Polymorphism,Compilation,Encapsulation,C,coding,hard
+"Can a class inherit from multiple classes in Python?","Yes, always","No, never","Only if interfaces are used","Only abstract classes allow this",A,coding,hard
+"What command is used to retrieve data from a database?",EXTRACT,GET,SELECT,FETCH,C,coding,hard
+"Which SQL clause is used to filter records?",ORDER BY,WHERE,GROUP BY,HAVING,B,coding,hard
+"Which JOIN returns all rows from the right table, even if there are no matches in the left table?","INNER JOIN","LEFT JOIN","RIGHT JOIN","FULL JOIN",C,coding,hard
+"What does the COUNT() aggregate function do in SQL?","Returns the sum of values","Returns the minimum value","Returns the average value","Returns the number of rows",D,coding,hard
+"What is the purpose of the GROUP BY statement?","To sort the result set","To group rows that have the same values","To filter data based on patterns","To join multiple tables together",B,coding,hard
+"Which statement is used to modify existing records in a table?",ALTER,UPDATE,MODIFY,CHANGE,B,coding,hard
+"What is the default sorting order of the ORDER BY clause?",Random,Descending,Ascending,Based on primary key,C,coding,hard
+"Which OOP concept allows objects of different classes to be treated as objects of a common superclass?",Encapsulation,Polymorphism,Inheritance,Abstraction,B,coding,hard
+"Which keyword prevents a method from being overridden in Java?",static,final,const,abstract,B,coding,hard
+"What does the SQL acronym ACID stand for in the context of database transactions?","Atomicity Consistency Isolation Durability","Auto Commit Index Delete","Alter Create Insert Drop","Allocation Cache Implementation Design",A,coding,hard

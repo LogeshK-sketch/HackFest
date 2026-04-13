@@ -10,22 +10,33 @@ from sqlalchemy.sql.expression import func
 @login_required
 def index():
     """Display category selection for assessments."""
-    # Count per category
-    categories = ['aptitude', 'logical', 'verbal', 'numerical', 'coding', 'core']
-    cat_counts = {}
-    total_q = 0
-    for cat in categories:
-        count = Question.query.filter_by(category=cat).count()
-        cat_counts[cat] = count
-        total_q += count
-        
-    if total_q == 0:
-        flash('No questions available in the database. Admin needs to run flask seed-questions.', 'danger')
-        
-    # We pass the subset with count > 0 to template
-    available_cats = {k:v for k,v in cat_counts.items() if v > 0}
-    
-    return render_template('assessment/index.html', cat_counts=available_cats, total_q=total_q)
+    category_data = {
+        'aptitude': {
+            'label': 'Aptitude',
+            'description': 'Quantitative, logical & verbal reasoning',
+            'icon': '📐',
+            'count': Question.query.filter_by(category='aptitude').count(),
+            'user_score': current_user.aptitude_score,
+            'attempts': TestAttempt.query.filter_by(user_id=current_user.id, category='aptitude').count(),
+        },
+        'coding': {
+            'label': 'Coding',
+            'description': 'Programming, DSA, OOP & SQL',
+            'icon': '💻',
+            'count': Question.query.filter_by(category='coding').count(),
+            'user_score': current_user.coding_score,
+            'attempts': TestAttempt.query.filter_by(user_id=current_user.id, category='coding').count(),
+        },
+        'core': {
+            'label': 'Core Subjects',
+            'description': 'OS, DBMS, Computer Networks & OOP',
+            'icon': '🖥️',
+            'count': Question.query.filter_by(category='core').count(),
+            'user_score': current_user.core_score,
+            'attempts': TestAttempt.query.filter_by(user_id=current_user.id, category='core').count(),
+        },
+    }
+    return render_template('assessment/index.html', category_data=category_data)
 
 @assessment_bp.route('/test')
 @login_required
@@ -113,26 +124,18 @@ def submit():
     db.session.add(attempt)
     db.session.commit() # Save attempt first, then we update user scores
     
-    # Update rolling average for aptitude/coding/core mapping
-    # Assuming logical, verbal, numerical fall under 'aptitude_score' conceptually. 
-    user_score_attr = 'aptitude_score'
-    if meta['category'] == 'coding':
-        user_score_attr = 'coding_score'
-    elif meta['category'] == 'core':
-        user_score_attr = 'core_score'
-        
-    # If category falls under aptitude grouping:
-    cat_mapping = ['aptitude', 'logical', 'verbal', 'numerical']
-    
-    # Get last 5 attempts in that conceptual group
-    if meta['category'] in cat_mapping:
-        recent = TestAttempt.query.filter_by(user_id=current_user.id).filter(TestAttempt.category.in_(cat_mapping)).order_by(TestAttempt.attempted_at.desc()).limit(5).all()
-    else:
-        recent = TestAttempt.query.filter_by(user_id=current_user.id, category=meta['category']).order_by(TestAttempt.attempted_at.desc()).limit(5).all()
-        
-    if recent:
-        avg_score = sum(r.score for r in recent) / len(recent)
-        setattr(current_user, user_score_attr, int(round(avg_score)))
+    # MODIFIED: After saving TestAttempt, recalculate and update User score
+    submitted_category = session['test_meta']['category']
+    # ADDED IMPORT: get_category_score
+    from app.utils import get_category_score
+    if submitted_category in ['aptitude', 'coding', 'core']:
+        new_score = get_category_score(current_user.id, submitted_category)
+        if submitted_category == 'aptitude':
+            current_user.aptitude_score = new_score
+        elif submitted_category == 'coding':
+            current_user.coding_score = new_score
+        elif submitted_category == 'core':
+            current_user.core_score = new_score
         db.session.commit()
     
     session.pop('current_test_ids', None)

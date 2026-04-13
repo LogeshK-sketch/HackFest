@@ -1,0 +1,31 @@
+Question,Option A,Option B,Option C,Option D,Answer,Category,Difficulty
+"Which component of the OS is responsible for managing system resources?",Shell,Kernel,Compiler,Device Driver,B,core,easy
+"What state is a process in while waiting for I/O completion?",Running,Ready,Blocked,Terminated,C,core,easy
+"What does the CPU use to temporarily store small amounts of data for fast access?",RAM,Hard Drive,Registers,Cache,C,core,easy
+"Which data structure is typically used by the OS to manage processes in the Ready state?",Stack,Queue,Tree,Graph,B,core,easy
+"What is a thread?","A heavy-weight process","A program in execution","A basic unit of CPU utilization","An I/O operation",C,core,easy
+"Which algorithm is used for CPU scheduling where the shortest job is executed first?",FCFS,Round Robin,SJF,Priority Scheduling,C,core,easy
+"What is the main function of the Memory Management Unit (MMU)?","Process scheduling","Translating logical addresses to physical addresses","Context switching","Handling interrupts",B,core,easy
+"Which situation occurs when two or more processes wait indefinitely for an event that can be caused by only one of the waiting processes?",Starvation,Deadlock,Race Condition,Mutual Exclusion,B,core,easy
+"What is swapping in Operating Systems?","Moving a process between main memory and disk","Translating virtual addresses","Changing CPU modes","Handling network packets",A,core,easy
+"Which command is used to list files in a Linux system?",cd,pwd,ls,mkdir,C,core,easy
+"What does DBMS stand for?","Database Management System","Data Basic Management Software","Dynamic Base Management System","Digital Business Management Server",A,core,medium
+"Which of the following represents a single conceptual entity in a database?",Table,Column,Row,View,C,core,medium
+"What is a Primary Key?","A key used to encrypt the database","A unique identifier for each record in a table","A key associated with the first column","A foreign key from another table",B,core,medium
+"Which property ensures that a transaction is all-or-nothing?",Isolation,Durability,Atomicity,Consistency,C,core,medium
+"What is the process of organizing data to reduce redundancy and improve data integrity?",Indexing,Hashing,Normalization,Partitioning,C,core,medium
+"In an Entity-Relationship (ER) model, what does a diamond represent?",Entity,Attribute,Relationship,Weak Entity,C,core,medium
+"Which SQL command is used to remove a table entirely from the database?",DELETE,DROP,TRUNCATE,REMOVE,B,core,medium
+"What constraint ensures a column cannot have a NULL value?",UNIQUE,PRIMARY KEY,NOT NULL,CHECK,C,core,medium
+"Which normal form deals with the elimination of transitive dependencies?",1NF,2NF,3NF,BCNF,C,core,medium
+"What does a Foreign Key do?","Improves query speed","Maintains referential integrity between tables","Encrypts data automatically","Acts as a primary key in the same table",B,core,medium
+"In the OSI model, which layer is responsible for routing packets?","Data Link Layer","Transport Layer","Network Layer","Physical Layer",C,core,hard
+"Which protocol provides reliable, connection-oriented data delivery?",UDP,IP,TCP,ICMP,C,core,hard
+"What is the function of the DNS (Domain Name System)?","Allocating IP addresses dynamically","Translating domain names to IP addresses","Securing web traffic","Routing packets between networks",B,core,hard
+"Which of the following is an Application Layer protocol?",HTTP,TCP,IP,Ethernet,A,core,hard
+"What is a MAC address?","A logical network address","A physical hardware address","A protocol for email","An encryption key",B,core,hard
+"What does NAT (Network Address Translation) do?","Encrypts network traffic","Translates private IP addresses to public IP addresses","Resolves domain names","Acts as a firewall",B,core,hard
+"Which device operates at the Data Link layer and forwards based on MAC addresses?",Hub,Router,Switch,Repeater,C,core,hard
+"What is the standard port for HTTPS traffic?",80,21,443,22,C,core,hard
+"Which metric refers to the maximum amount of data transmitted over an internet connection in a given amount of time?",Latency,Jitter,Bandwidth,Throughput,C,core,hard
+"What is a subnet mask used for?","Hiding the IP address securely","Determining the network and host portions of an IP address","Filtering spam emails","Speeding up routing protocols",B,core,hard
