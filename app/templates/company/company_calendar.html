@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}Placement Calendar{% endblock %}
+
+{% block head %}
+<style>
+    /* Urgent Banner */
+    .urgent-banner { border-left: 5px solid #ffc107; background-color: #fff3cd; }
+    
+    /* Layout styling */
+    .filter-bar { position: sticky; top: 0; z-index: 1000; background: white; border-bottom: 1px solid #e0e0e0; }
+    
+    .event-card { transition: 0.2s ease; border: 1px solid #e0e0e0; cursor: pointer; border-left-width: 5px; }
+    .event-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    
+    /* Color Bars */
+    .event-upcoming { border-left-color: #198754; }
+    .event-past { border-left-color: #dc3545; opacity: 0.7; }
+    .event-urgent { border-left-color: #fd7e14; animation: pulse 2s infinite; }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(253, 126, 20, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(253, 126, 20, 0); }
+    }
+    
+    .chip { font-size: 0.75rem; border-radius: 12px; padding: 3px 8px; font-weight: bold; border: 1px solid #ccc; display: inline-block; }
+    .chip-online { background: #e8f4fd; color: #0d6efd; border-color: #0d6efd; }
+    .chip-offline { background: #fdf5e8; color: #fd7e14; border-color: #fd7e14; }
+    
+    /* Calendar Grid */
+    .calendar-wrapper { display: none; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .calendar-header-day { text-align: center; font-weight: bold; padding: 10px 0; font-size: 0.85rem; color: #6c757d; }
+    .calendar-day { border: 1px solid #e0e0e0; min-height: 100px; padding: 5px; background: #fff; border-radius: 5px; position: relative; cursor: pointer; transition: 0.2s; }
+    .calendar-day:hover { background: #f8f9fa; }
+    .calendar-day.empty { background: transparent; border: none; cursor: default; }
+    .calendar-day-num { font-weight: bold; color: #495057; font-size: 0.9rem; }
+    .calendar-day.today .calendar-day-num { background: #0d6efd; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; }
+    
+    .cal-event-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .cal-event-item { font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #f1f3f5; padding: 2px 4px; border-radius: 3px; margin-top: 2px; }
+    .cal-event-upcoming { background: #198754; }
+    .cal-event-past { background: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if request.args.get('msg') %}
+<div class="alert alert-success mt-3">{{ request.args.get('msg') }}</div>
+{% endif %}
+
+<!-- Urgent Banner -->
+{% if urgent_ids %}
+<div class="alert urgent-banner rounded-3 shadow-sm d-flex align-items-center mb-4 p-3 font-weight-bold text-dark">
+    <i class="bi bi-lightning-charge-fill text-warning fs-3 me-3"></i>
+    <div class="flex-grow-1">
+        <h5 class="mb-0 fw-bold">⚡ {{ urgent_ids|length }} drives happening in the next 3 days!</h5>
+        <small class="mb-0">Check the timeline below and make sure to apply.</small>
+    </div>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0">Placement Calendar</h2>
+    {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('admin.add_event') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Event</a>
+    {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar p-3 rounded shadow-sm mb-4">
+    <form id="filterForm" method="GET" action="{{ url_for('company.calendar') }}">
+        <div class="row g-2 align-items-center">
+            <!-- Search -->
+            <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="company" class="form-control" placeholder="Search company..." value="{{ request.args.get('company', '') }}">
+                </div>
+            </div>
+            
+            <!-- Roles -->
+            <div class="col-md-2">
+                <select name="role" class="form-select form-select-sm">
+                    <option value="">All Roles</option>
+                    {% for r in all_roles %}
+                        <option value="{{ r }}" {% if request.args.get('role') == r %}selected{% endif %}>{{ r }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Location -->
+            <div class="col-md-2">
+                <select name="location" class="form-select form-select-sm">
+                    <option value="">All Locations</option>
+                    <option value="online" {% if request.args.get('location') == 'online' %}selected{% endif %}>Online</option>
+                    <option value="offline" {% if request.args.get('location') == 'offline' %}selected{% endif %}>Offline</option>
+                </select>
+            </div>
+            
+            <!-- Timeframe Toggle -->
+            <div class="col-md-3">
+                <div class="btn-group btn-group-sm w-100" role="group">
+                    <input type="radio" class="btn-check submit-trigger" name="timeframe" id="tfAll" value="" {% if not request.args.get('timeframe') %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="tfAll">All</label>
+                  
+                    <input type="radio" class="btn-check submit-trigger" name="timeframe" id="tfUpcoming" value="upcoming" {% if request.args.get('timeframe') == 'upcoming' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="tfUpcoming">Upcoming</label>
+                  
+                    <input type="radio" class="btn-check submit-trigger" name="timeframe" id="tfPast" value="past" {% if request.args.get('timeframe') == 'past' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary" for="tfPast">Past</label>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="col-md-2 text-end d-flex justify-content-between align-items-center">
+                <a href="{{ url_for('company.calendar') }}" class="text-secondary small text-decoration-none">Clear</a>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-primary" id="btnList"><i class="bi bi-list-ul"></i></button>
+                    <button type="button" class="btn btn-outline-primary" id="btnGrid"><i class="bi bi-calendar3"></i></button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- DATA STORE FOR JS GRID -->
+<script>
+    const globalEvents = [
+        {% for e in events %}
+        {
+            id: {{ e.id }},
+            company: "{{ e.company_name }}",
+            role: "{{ e.role }}",
+            date: "{{ e.event_date.strftime('%Y-%m-%d') }}",
+            isPast: {% if e.event_date < today_date %}true{% else %}false{% endif %}
+        },
+        {% endfor %}
+    ];
+</script>
+
+<!-- Timeline View -->
+<div id="listView">
+    {% if grouped %}
+        {% for date_obj, date_events in grouped.items() %}
+            <div class="mb-5">
+                <h5 class="fw-bold text-muted mb-3 pb-2 border-bottom">
+                    {{ date_obj.strftime('%B %d, %Y') }} <span class="ms-1 small fw-normal">&mdash; {{ date_obj.strftime('%A') }}</span>
+                </h5>
+                <div class="row g-3">
+                    {% for ev in date_events %}
+                        {% set is_past = ev.event_date < today_date %}
+                        {% set is_urgent = ev.id in urgent_ids %}
+                        {% set is_applied = ev.id in applied_ids %}
+                        
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card event-card h-100 rounded-3 {% if is_past %}event-past{% elif is_urgent %}event-urgent{% else %}event-upcoming{% endif %} bg-white p-3">
+                                
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h6 class="fw-bold mb-0 text-dark">{{ ev.company_name }}</h6>
+                                    <span class="badge bg-light text-dark border">{{ ev.role }}</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    {% if ev.location == 'online' %}
+                                        <span class="chip chip-online"><i class="bi bi-globe"></i> Online</span>
+                                    {% else %}
+                                        <span class="chip chip-offline"><i class="bi bi-geo-alt-fill"></i> {{ ev.venue or 'Offline' }}</span>
+                                    {% endif %}
+                                    {% if ev.eligibility_cgpa %}
+                                        <span class="chip" style="color:#6c757d;">CGPA &ge; {{ ev.eligibility_cgpa }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if ev.eligibility_skills %}
+                                <p class="small text-muted mb-3 text-truncate" title="{{ ev.eligibility_skills }}">
+                                    <strong>Skills:</strong> {{ ev.eligibility_skills }}
+                                </p>
+                                {% endif %}
+                                
+                                <div class="mt-auto d-flex justify-content-between align-items-end">
+                                    <div>
+                                        <div class="countdown fw-bold small {% if is_past %}text-danger{% elif is_urgent %}text-warning{% else %}text-success{% endif %}" data-date="{{ ev.event_date.strftime('%Y-%m-%dT00:00:00') }}">
+                                            Loading...
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary btn-details" data-id="{{ ev.id }}">Details</button>
+                                        
+                                        {% if not is_past %}
+                                        <button class="btn btn-sm btn-apply toggle-apply {% if is_applied %}btn-success{% else %}btn-primary{% endif %}" data-id="{{ ev.id }}">
+                                            {% if is_applied %}
+                                                <i class="bi bi-check2"></i> Applied
+                                            {% else %}
+                                                Mark Applied
+                                            {% endif %}
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if current_user.role == 'admin' %}
+                                        <form method="POST" action="{{ url_for('admin.delete_event', id=ev.id) }}" class="d-inline" onsubmit="return confirm('Delete this event?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+        <h4 class="mt-3 text-muted">No events found matching criteria.</h4>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Content Grid View -->
+<div id="gridView" class="calendar-wrapper bg-white rounded shadow-sm p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn btn-sm btn-outline-secondary" id="calPrev">&laquo; Prev</button>
+        <h5 class="fw-bold mb-0" id="calMonthYear">Loading...</h5>
+        <button class="btn btn-sm btn-outline-secondary" id="calNext">Next &raquo;</button>
+    </div>
+    
+    <div class="calendar-grid">
+        <div class="calendar-header-day">Sun</div>
+        <div class="calendar-header-day">Mon</div>
+        <div class="calendar-header-day">Tue</div>
+        <div class="calendar-header-day">Wed</div>
+        <div class="calendar-header-day">Thu</div>
+        <div class="calendar-header-day">Fri</div>
+        <div class="calendar-header-day">Sat</div>
+        <!-- Days injected via JS -->
+    </div>
+</div>
+
+<!-- Selected Day View (for grid) -->
+<div id="selectedDayEvents" class="d-none mb-4">
+    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3" id="selectedDateTitle">Events</h5>
+    <div class="row g-3" id="selectedDateContainer"></div>
+</div>
+
+<!-- Modal for Event Details -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalCompany">Company Name</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-primary fw-bold mb-3" id="modalRole">Role</p>
+                <div class="mb-3 d-flex gap-2">
+                    <span class="badge bg-light text-dark border" id="modalDate">Date</span>
+                    <span class="badge bg-light text-dark border" id="modalLocation">Location</span>
+                </div>
+                
+                <h6 class="fw-bold small text-muted text-uppercase">Eligibility</h6>
+                <p class="small mb-1"><strong>CGPA:</strong> <span id="modalCGPA">None</span></p>
+                <p class="small mb-3"><strong>Skills:</strong> <span id="modalSkills">Any</span></p>
+                
+                <h6 class="fw-bold small text-muted text-uppercase">Description</h6>
+                <p class="small text-secondary" id="modalDesc">No description.</p>
+                
+                <div id="modalLinkContainer" class="d-none mt-3">
+                    <a href="#" target="_blank" class="btn btn-outline-primary w-100" id="modalLink"><i class="bi bi-box-arrow-up-right"></i> Official Registration Link</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- Filter Auto-submit ---
+    const filterForm = document.getElementById('filterForm');
+    document.querySelectorAll('select, .submit-trigger').forEach(el => {
+        el.addEventListener('change', () => filterForm.submit());
+    });
+    
+    // --- Countdown Timer ---
+    function updateCountdowns() {
+      document.querySelectorAll('.countdown').forEach(el => {
+        const eventDate = new Date(el.dataset.date);
+        const now = new Date();
+        const diff = eventDate - now;
+        
+        if (diff <= 0) { 
+            el.textContent = 'Event passed'; 
+            el.classList.add('text-danger'); 
+            return; 
+        }
+        
+        const days = Math.floor(diff / 86400000);
+        const hrs  = Math.floor((diff % 86400000) / 3600000);
+        el.textContent = days > 0 ? `${days}d ${hrs}h remaining` : `${hrs}h remaining`;
+      });
+    }
+    setInterval(updateCountdowns, 60000);
+    updateCountdowns();
+
+    // --- Modal Logic ---
+    const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+    document.querySelectorAll('.btn-details').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Stop grid click overlap
+            const id = this.dataset.id;
+            
+            fetch(`/company/calendar/event/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('modalCompany').textContent = data.company_name;
+                document.getElementById('modalRole').textContent = data.role;
+                document.getElementById('modalDate').textContent = data.event_date;
+                document.getElementById('modalLocation').textContent = data.location === 'online' ? 'Online' : data.venue || 'Offline';
+                document.getElementById('modalCGPA').textContent = data.eligibility_cgpa ? `>= ${data.eligibility_cgpa}` : 'No limit';
+                document.getElementById('modalSkills').textContent = data.eligibility_skills || 'Any';
+                document.getElementById('modalDesc').textContent = data.description || 'No description provided.';
+                
+                const linkDiv = document.getElementById('modalLinkContainer');
+                const linkAnchor = document.getElementById('modalLink');
+                if(data.registration_link) {
+                    linkAnchor.href = data.registration_link;
+                    linkDiv.classList.remove('d-none');
+                } else {
+                    linkDiv.classList.add('d-none');
+                }
+                
+                modal.show();
+            });
+        });
+    });
+
+    // --- Apply Toggle Logic ---
+    document.querySelectorAll('.toggle-apply').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const id = this.dataset.id;
+            fetch(`/company/calendar/apply/${id}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if(data.applied) {
+                    this.classList.replace('btn-primary', 'btn-success');
+                    this.innerHTML = '<i class="bi bi-check2"></i> Applied';
+                } else {
+                    this.classList.replace('btn-success', 'btn-primary');
+                    this.textContent = 'Mark Applied';
+                }
+            });
+        });
+    });
+
+    // --- View Toggle ---
+    const btnList = document.getElementById('btnList');
+    const btnGrid = document.getElementById('btnGrid');
+    const listView = document.getElementById('listView');
+    const gridView = document.getElementById('gridView');
+    
+    // Default configuration checking local storage
+    if (localStorage.getItem('calView') === 'grid') {
+        showGrid();
+    }
+    
+    btnList.addEventListener('click', showList);
+    btnGrid.addEventListener('click', showGrid);
+    
+    function showList() {
+        listView.style.display = 'block';
+        gridView.style.display = 'none';
+        btnList.classList.replace('btn-outline-primary', 'btn-primary');
+        btnGrid.classList.replace('btn-primary', 'btn-outline-primary');
+        document.getElementById('selectedDayEvents').classList.add('d-none');
+        localStorage.setItem('calView', 'list');
+    }
+    
+    function showGrid() {
+        listView.style.display = 'none';
+        gridView.style.display = 'block';
+        btnGrid.classList.replace('btn-outline-primary', 'btn-primary');
+        btnList.classList.replace('btn-primary', 'btn-outline-primary');
+        localStorage.setItem('calView', 'grid');
+        renderCalendar();
+    }
+    
+    // --- Grid Render Logic ---
+    let currentDate = new Date();
+    
+    document.getElementById('calPrev').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+    
+    document.getElementById('calNext').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+    
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        document.getElementById('calMonthYear').textContent = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const grid = document.querySelector('.calendar-grid');
+        
+        // Clear previous days (keep headers)
+        document.querySelectorAll('.calendar-day').forEach(el => el.remove());
+        
+        // Empty slots
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            const div = document.createElement('div');
+            div.className = 'calendar-day empty';
+            grid.appendChild(div);
+        }
+        
+        // Days
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+            const div = document.createElement('div');
+            div.className = 'calendar-day';
+            
+            // local formatting mapping YYYY-MM-DD
+            const yyyy = year.toString();
+            const mm = (month+1).toString().padStart(2, '0');
+            const dd = i.toString().padStart(2, '0');
+            const targetDateStr = `${yyyy}-${mm}-${dd}`;
+            
+            if(targetDateStr === todayStr) div.classList.add('today');
+            
+            div.innerHTML = `<div class="calendar-day-num">${i}</div>`;
+            
+            // Append events
+            const dayEvents = globalEvents.filter(e => e.date === targetDateStr);
+            dayEvents.forEach(e => {
+                const badgeClass = e.isPast ? 'cal-event-past' : 'cal-event-upcoming';
+                const el = `<div class="cal-event-item shadow-sm"><span class="cal-event-dot ${badgeClass}"></span>${e.company}</div>`;
+                div.innerHTML += el;
+            });
+            
+            div.addEventListener('click', () => {
+                if(dayEvents.length > 0) {
+                    showSelectedDay(targetDateStr, dayEvents);
+                }
+            });
+            
+            grid.appendChild(div);
+        }
+    }
+    
+    function showSelectedDay(dateStr, evts) {
+        document.getElementById('selectedDayEvents').classList.remove('d-none');
+        document.getElementById('selectedDateTitle').textContent = `Events on ${dateStr}`;
+        
+        const container = document.getElementById('selectedDateContainer');
+        container.innerHTML = '';
+        
+        evts.forEach(e => {
+            container.innerHTML += `
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 bg-light p-3 border-start border-4 ${e.isPast ? 'border-danger' : 'border-success'}">
+                    <h6 class="fw-bold">${e.company}</h6>
+                    <small class="text-muted"><i class="bi bi-briefcase"></i> ${e.role}</small>
+                    <div class="mt-2 text-end">
+                       <button class="btn btn-sm btn-outline-primary btn-details" data-id="${e.id}">Take Action</button>
+                    </div>
+                </div>
+            </div>`;
+        });
+        
+        // Re-attach handlers generated dynamically
+        container.querySelectorAll('.btn-details').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const originalBtn = document.querySelector(`#listView .btn-details[data-id="${this.dataset.id}"]`);
+                if(originalBtn) originalBtn.click();
+            });
+        });
+    }
+
+});
+</script>
+{% endblock %}

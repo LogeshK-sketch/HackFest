@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}My Study Plan{% endblock %}
+
+{% block content %}
+<style>
+    .task-card { transition: all 0.2s ease; border-radius: 10px; border: 1px solid #e0e0e0; cursor: pointer; }
+    .task-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .task-card.completed { opacity: 0.7; background-color: #f8f9fa; }
+    .task-card.completed .task-title { text-decoration: line-through; color: #6c757d; }
+    .badge-aptitude { background-color: #0d6efd; }
+    .badge-coding { background-color: #198754; }
+    .badge-core { background-color: #fd7e14; }
+    .chip { padding: 4px 10px; font-size: 0.75rem; border-radius: 15px; font-weight: bold; border: 1px solid #ddd; background: white;}
+    .chip-easy { border-color: #198754; color: #198754; }
+    .chip-medium { border-color: #ffc107; color: #ffc107; }
+    .chip-hard { border-color: #dc3545; color: #dc3545; }
+    .strike-btn { width: 36px; height: 36px; border-radius: 50%; opacity: 0.7; transition: 0.2s; }
+    .strike-btn:hover { opacity: 1; }
+    .del-btn { color: #ccc; transition: 0.2s; }
+    .del-btn:hover { color: #dc3545; }
+    .nav-pills .nav-link.active { font-weight: bold; }
+</style>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold mb-0">Study Plan</h2>
+        <p class="text-muted">Your personalized daily roadmap curated to fix your weaknesses.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <form method="POST" action="{{ url_for('planner.generate_study_plan') }}">
+            <button type="submit" class="btn btn-outline-primary shadow-sm rounded-pill px-4 fw-bold">
+               <i class="bi bi-arrow-repeat me-1"></i> Regenerate Plan
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Progress Bar & Badges -->
+{% if total > 0 %}
+<div class="card shadow-sm border-0 mb-4 bg-white rounded-3">
+    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="flex-grow-1 me-md-4" style="min-width: 200px;">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="fw-bold text-muted small">Overall Progress</span>
+                <span class="fw-bold text-primary small">{{ completed }} / {{ total }} Completed</span>
+            </div>
+            <div class="progress" style="height: 10px; border-radius: 10px;">
+                <div class="progress-bar bg-primary progress-bar-striped" role="progressbar" style="width: {{ progress }}%;"></div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge badge-aptitude px-3 py-2 fs-6 shadow-sm"><i class="bi bi-calculator me-1"></i> {{ aptitude_tasks|length }}</span>
+            <span class="badge badge-coding px-3 py-2 fs-6 shadow-sm"><i class="bi bi-laptop me-1"></i> {{ coding_tasks|length }}</span>
+            <span class="badge badge-core px-3 py-2 fs-6 shadow-sm"><i class="bi bi-cpu me-1"></i> {{ core_tasks|length }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Suggestions Banner -->
+{% if suggestions %}
+<div class="alert alert-warning border-0 shadow-sm d-flex align-items-start mb-4 rounded-3 p-4">
+    <i class="bi bi-lightbulb-fill text-warning mt-1 me-3 fs-3"></i>
+    <div>
+        <h5 class="fw-bold text-dark mb-2">Daily Suggestions</h5>
+        <ul class="mb-0 text-dark ps-3" style="line-height: 1.8;">
+            {% for rec in suggestions %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tasks Columns -->
+<div class="card shadow-sm border-0 bg-white pt-2 rounded-3">
+    <div class="card-header bg-white border-0 pb-0">
+        <ul class="nav nav-pills" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pills-aptitude" type="button">Aptitude</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-coding" type="button">Coding</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-core" type="button">Core CS</button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body bg-light p-4 rounded-bottom" style="min-height: 400px;">
+        <div class="tab-content" id="pills-tabContent">
+            
+            <!-- Category Macro -->
+            {% macro render_tasks(category_tasks, badge_color) %}
+                {% if category_tasks %}
+                    <div class="row g-3">
+                    {% for tk in category_tasks %}
+                        <div class="col-md-6">
+                            <div class="card task-card bg-white {% if tk.is_completed %}completed{% endif %}" id="task-{{ tk.id }}">
+                                <div class="card-body p-3 d-flex align-items-start">
+                                    <button class="btn btn-sm btn-outline-success strike-btn me-3 toggle-task" data-id="{{ tk.id }}">
+                                        <i class="bi {% if tk.is_completed %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                                    </button>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1 task-title">{{ tk.title }}</h6>
+                                        <div class="d-flex align-items-center mt-2 gap-2">
+                                            <span class="badge {{ badge_color }}">{{ tk.category|capitalize }}</span>
+                                            {% if tk.difficulty %}
+                                            <span class="chip chip-{{ tk.difficulty|lower }}">{{ tk.difficulty }}</span>
+                                            {% endif %}
+                                            {% if tk.due_date %}
+                                            <small class="text-muted ms-auto"><i class="bi bi-calendar-event"></i> {{ tk.due_date.strftime('%b %d') }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-link del-btn ms-2 p-0 delete-task" data-id="{{ tk.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-check2-circle text-success" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-3">All caught up in this section!</h6>
+                    </div>
+                {% endif %}
+            {% endmacro %}
+
+            <div class="tab-pane fade show active" id="pills-aptitude">
+                {{ render_tasks(aptitude_tasks, 'badge-aptitude') }}
+            </div>
+            
+            <div class="tab-pane fade" id="pills-coding">
+                {{ render_tasks(coding_tasks, 'badge-coding') }}
+            </div>
+            
+            <div class="tab-pane fade" id="pills-core">
+                {{ render_tasks(core_tasks, 'badge-core') }}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card shadow-sm border-0 py-5 text-center mt-4 rounded-3 h-100 d-flex justify-content-center align-items-center" style="min-height: 60vh;">
+    <div style="max-width: 400px;">
+        <i class="bi bi-journal-check text-muted" style="font-size: 5rem;"></i>
+        <h3 class="fw-bold mt-4 text-dark">No Active Plan</h3>
+        <p class="text-muted mb-4 fs-6">Let's build a roadmap tailored to your strengths and weaknesses to help you master placements.</p>
+        <form method="POST" action="{{ url_for('planner.generate_study_plan') }}">
+            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
+               Generate Your Study Plan
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Toggle Completion
+    document.querySelectorAll('.toggle-task').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const taskId = this.dataset.id;
+            const card = document.getElementById(`task-${taskId}`);
+            const icon = this.querySelector('i');
+            
+            fetch(`/planner/toggle/${taskId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    if (data.is_completed) {
+                        card.classList.add('completed');
+                        icon.classList.replace('bi-circle', 'bi-check-circle-fill');
+                    } else {
+                        card.classList.remove('completed');
+                        icon.classList.replace('bi-check-circle-fill', 'bi-circle');
+                    }
+                    
+                    setTimeout(() => window.location.reload(), 600); // Reload to recalculate progress rings
+                }
+            });
+        });
+    });
+
+    // Delete Task
+    document.querySelectorAll('.delete-task').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            if(!confirm('Are you sure you want to completely remove this task?')) return;
+            const taskId = this.dataset.id;
+            
+            fetch(`/planner/delete/${taskId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    window.location.reload();
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -62,3 +62,74 @@ def get_readiness_label(aptitude: int, coding: int, core: int) -> str:
     elif average >= 40:
         return 'Medium'
     return 'Low'
+
+from app.models import Leaderboard, Notification, TestAttempt
+from app.extensions import db
+from sqlalchemy import func
+import json
+from datetime import datetime
+
+def compute_badge(tests_taken: int, avg_score: float) -> str:
+    """
+    Return badge string based on thresholds:
+      'Advanced'     — tests_taken >= 15 AND avg_score >= 70
+      'Intermediate' — tests_taken >= 5  AND avg_score >= 40
+      'Beginner'     — everything else
+    """
+    if tests_taken >= 15 and avg_score >= 70:
+        return 'Advanced'
+    if tests_taken >= 5 and avg_score >= 40:
+        return 'Intermediate'
+    return 'Beginner'
+
+def update_leaderboard(user_id: int) -> None:
+    """
+    Called after every test submission. Recalculates and upserts
+    the Leaderboard row for the given user.
+    """
+    try:
+        attempts = TestAttempt.query.filter_by(user_id=user_id).all()
+        
+        tests_taken = len(attempts)
+        total_score = sum(a.score for a in attempts)
+        avg_score   = round(total_score / tests_taken, 2) if tests_taken > 0 else 0
+        
+        new_badge = compute_badge(tests_taken, avg_score)
+        
+        lb = Leaderboard.query.filter_by(user_id=user_id).first()
+        if lb is None:
+            lb = Leaderboard(user_id=user_id)
+            db.session.add(lb)
+            
+        old_badge = lb.badge
+        lb.total_score  = total_score
+        lb.tests_taken  = tests_taken
+        lb.badge        = new_badge
+        lb.last_updated = datetime.utcnow()
+        db.session.commit()
+        
+        if new_badge != old_badge:
+            push_notification(user_id,
+                f"Congratulations! You reached {new_badge} level!",
+                type='success')
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(str(e))
+
+def push_notification(user_id: int, message: str, type: str = 'info') -> None:
+    """
+    Insert a new Notification row for the user.
+    """
+    try:
+        n = Notification(
+            user_id=user_id,
+            message=message,
+            type=type,
+            is_read=False,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(n)
+        db.session.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("Failed to push notification: " + str(e))

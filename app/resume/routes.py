@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models import Resume
-from app.ml.resume_analyzer import extract_text_from_pdf, analyze_resume
+from app.ml.resume_analyzer import extract_text_from_pdf, analyze_resume_with_gemini
 import os, json
 
 resume_bp = Blueprint('resume', __name__, url_prefix='/resume')
@@ -40,24 +40,28 @@ def upload():
         file.save(filepath)
         
         text = extract_text_from_pdf(filepath)
-        result = analyze_resume(text)
+        result = analyze_resume_with_gemini(text)
         
         r = Resume(
             user_id=current_user.id,
             filename=secure_filename(file.filename),
             score=result['score'],
-            extracted_skills=json.dumps(result['matched_skills']),
-            missing_skills=json.dumps(result['missing_skills']),
-            suggestions=json.dumps(result['suggestions'])
+            extracted_skills=json.dumps(result['skills_found']),
+            missing_skills=json.dumps(result['skills_missing']),
+            suggestions=json.dumps(result['suggestions']),
+            projects_detected=json.dumps(result['projects_detected']),
+            experience_level=result.get('experience_level', '')
         )
         db.session.add(r)
         db.session.commit()
         
         return jsonify({
             'score': r.score,
-            'matched': result['matched_skills'],
-            'missing': result['missing_skills'],
+            'matched': result['skills_found'],
+            'missing': result['skills_missing'],
             'suggestions': result['suggestions'],
+            'projects': result['projects_detected'],
+            'experience_level': result.get('experience_level', ''),
             'resume_id': r.id
         }), 200
         
@@ -77,7 +81,9 @@ def history():
             'score': r.score,
             'extracted_skills': json.loads(r.extracted_skills) if r.extracted_skills else [],
             'missing_skills': json.loads(r.missing_skills) if r.missing_skills else [],
-            'suggestions': json.loads(r.suggestions) if r.suggestions else []
+            'suggestions': json.loads(r.suggestions) if r.suggestions else [],
+            'projects_detected': json.loads(r.projects_detected) if getattr(r, 'projects_detected', None) else [],
+            'experience_level': getattr(r, 'experience_level', '')
         })
     return render_template('resume/history.html', resumes=resumes)
 
@@ -96,5 +102,7 @@ def detail(id):
         'extracted_skills': json.loads(r.extracted_skills) if r.extracted_skills else [],
         'missing_skills': json.loads(r.missing_skills) if r.missing_skills else [],
         'suggestions': json.loads(r.suggestions) if r.suggestions else [],
+        'projects_detected': json.loads(r.projects_detected) if getattr(r, 'projects_detected', None) else [],
+        'experience_level': getattr(r, 'experience_level', ''),
         'uploaded_at': r.uploaded_at.strftime('%d %b %Y, %I:%M %p')
     })

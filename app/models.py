@@ -67,9 +67,20 @@ class StudyTask(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    category = db.Column(db.String(50), nullable=True)
+    difficulty = db.Column(db.String(20), nullable=True)
     due_date = db.Column(db.DateTime, nullable=True)
     is_completed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class StudyStreak(db.Model):
+    """Tracks daily study streaks."""
+    __tablename__ = 'study_streak'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    current_streak = db.Column(db.Integer, default=0)
+    longest_streak = db.Column(db.Integer, default=0)
+    last_completed_date = db.Column(db.Date, nullable=True)
 
 class Resume(db.Model):
     __tablename__ = 'resume'
@@ -81,15 +92,96 @@ class Resume(db.Model):
     extracted_skills = db.Column(db.Text)   # JSON list
     missing_skills   = db.Column(db.Text)   # JSON list
     suggestions      = db.Column(db.Text)   # JSON list
+    projects_detected = db.Column(db.Text)  # JSON list
+    experience_level  = db.Column(db.String(50))
 
 class Company(db.Model):
     __tablename__ = 'company'
+    id              = db.Column(db.Integer, primary_key=True)
+    name            = db.Column(db.String(100), nullable=False)
+    description     = db.Column(db.Text)
+    industry        = db.Column(db.String(50))
+    hiring_roles    = db.Column(db.String(200)) # comma-sep
+    required_skills = db.Column(db.String(300)) # comma-sep
+    package_range   = db.Column(db.String(50))
+    logo_url        = db.Column(db.String(300))
+    website         = db.Column(db.String(200))
+    headquarters    = db.Column(db.String(100))
+    hiring_process  = db.Column(db.String(500)) # pipe-sep
+    prep_topics     = db.Column(db.String(500)) # pipe-sep
+
+class CompanyPost(db.Model):
+    __tablename__ = 'company_post'
     id          = db.Column(db.Integer, primary_key=True)
-    name        = db.Column(db.String(100), nullable=False)
-    domain      = db.Column(db.String(20))  # 'service' or 'product'
-    difficulty  = db.Column(db.String(10))  # Easy/Medium/Hard
-    avg_ctc_lpa = db.Column(db.Float, default=0.0)
-    focus_topics= db.Column(db.Text)        # JSON list
+    company_id  = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title       = db.Column(db.String(200), nullable=False)
+    content     = db.Column(db.Text, nullable=False)
+    post_type   = db.Column(db.String(50)) # experience/tip/question
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='posts')
+    user = db.relationship('User', backref='company_posts')
+
+class PostLike(db.Model):
+    __tablename__ = 'post_like'
+    id          = db.Column(db.Integer, primary_key=True)
+    post_id     = db.Column(db.Integer, db.ForeignKey('company_post.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    __table_args__ = (db.UniqueConstraint('post_id', 'user_id'),)
+
+class PostComment(db.Model):
+    __tablename__ = 'post_comment'
+    id          = db.Column(db.Integer, primary_key=True)
+    post_id     = db.Column(db.Integer, db.ForeignKey('company_post.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    text        = db.Column(db.Text, nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    post = db.relationship('CompanyPost', backref='comments')
+    user = db.relationship('User')
+
+class CompanyFollow(db.Model):
+    __tablename__ = 'company_follow'
+    id          = db.Column(db.Integer, primary_key=True)
+    company_id  = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    __table_args__ = (db.UniqueConstraint('company_id', 'user_id'),)
+
+class SavedCompany(db.Model):
+    __tablename__ = 'saved_company'
+    id          = db.Column(db.Integer, primary_key=True)
+    company_id  = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    __table_args__ = (db.UniqueConstraint('company_id', 'user_id'),)
+
+class PlacementEvent(db.Model):
+    __tablename__ = 'placement_events'
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(100), nullable=False)
+    event_date = db.Column(db.Date, nullable=False)
+    location = db.Column(db.String(50), nullable=False)
+    venue = db.Column(db.String(200), nullable=True)
+    eligibility_cgpa = db.Column(db.Float, nullable=True)
+    eligibility_skills = db.Column(db.String(300), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    registration_link = db.Column(db.String(300), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class EventApplication(db.Model):
+    __tablename__ = 'event_applications'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('placement_events.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50), default='applied')
+    
+    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='_event_user_uc'),)
+    
+    event = db.relationship('PlacementEvent', backref=db.backref('applications', lazy=True))
+    user = db.relationship('User', backref=db.backref('event_applications', lazy=True))
 
 class CompanyQuestion(db.Model):
     __tablename__ = 'company_question'
@@ -118,3 +210,50 @@ class Notification(db.Model):
     is_read    = db.Column(db.Boolean, default=False)
     type       = db.Column(db.String(30))  # info/warning/success
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+class StudyResource(db.Model):
+    __tablename__ = 'study_resource'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    topic = db.Column(db.String(50)) 
+    url = db.Column(db.String(300))
+
+class StudentStudyProgress(db.Model):
+    __tablename__ = 'student_study_progress'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    resource_id = db.Column(db.Integer, db.ForeignKey('study_resource.id'), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    resource = db.relationship('StudyResource')
+
+class CodingProblem(db.Model):
+    __tablename__ = 'coding_problem'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(200), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=False)
+    difficulty = db.Column(db.String(20), nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    input_format = db.Column(db.Text)
+    output_format = db.Column(db.Text)
+    constraints = db.Column(db.Text)
+    sample_input = db.Column(db.Text)
+    sample_output = db.Column(db.Text)
+    explanation = db.Column(db.Text)
+    test_cases = db.Column(db.Text) # JSON field mapping
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Submission(db.Model):
+    __tablename__ = 'submission'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    problem_id = db.Column(db.Integer, db.ForeignKey('coding_problem.id'), nullable=False)
+    code = db.Column(db.Text, nullable=False)
+    language = db.Column(db.String(30), default='python')
+    result = db.Column(db.String(20))
+    execution_time = db.Column(db.Float)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    problem = db.relationship('CodingProblem', backref='submissions')

@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.name }} - Profile{% endblock %}
+
+{% block content %}
+<style>
+    .linkedin-blue { color: #0a66c2; }
+    .bg-linkedin { background-color: #0a66c2; color: white; }
+    .btn-outline-linkedin { border-color: #0a66c2; color: #0a66c2; }
+    .btn-outline-linkedin:hover { background-color: #f3f9fe; border-color: #0a66c2; color: #0a66c2; }
+    .btn-linkedin { background-color: #0a66c2; color: white; border: none; }
+    .btn-linkedin:hover { background-color: #004182; color: white; }
+    .hero-banner { height: 200px; background: linear-gradient(to right, #0a66c2, #0077b5); position: relative; border-radius: 12px 12px 0 0; }
+    .hero-logo { width: 120px; height: 120px; object-fit: contain; border-radius: 8px; border: 4px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .nav-tabs .nav-link { color: #666; font-weight: 600; border: none; border-bottom: 2px solid transparent; padding: 1rem 1.5rem; }
+    .nav-tabs .nav-link.active { color: #0a66c2; border-bottom: 2px solid #0a66c2; background: transparent; }
+    .nav-tabs .nav-link:hover:not(.active) { color: #0a66c2; border-bottom: 2px solid #ccc; background: rgba(10, 102, 194, 0.05); }
+    .timeline { border-left: 2px solid #e0e0e0; padding-left: 20px; position: relative; }
+    .timeline-item { margin-bottom: 25px; position: relative; }
+    .timeline-item::before { content: ""; position: absolute; left: -27px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #0a66c2; box-shadow: 0 0 0 4px white; }
+    .post-card { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 15px; }
+    .action-btn { background: none; border: none; color: #666; font-weight: 600; padding: 8px 12px; border-radius: 4px; transition: 0.2s; }
+    .action-btn:hover { background: rgba(0,0,0,0.05); color: #333; }
+    .action-btn.active { color: #0a66c2; }
+</style>
+
+<div class="card shadow-sm border-0 mb-4 rounded-3 bg-white">
+    <!-- Hero Banner -->
+    <div class="hero-banner"></div>
+    
+    <div class="card-body px-4 pb-4 position-relative" style="margin-top: -60px;">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <img src="{{ company.logo_url or 'https://via.placeholder.com/120' }}" alt="{{ company.name }}" class="hero-logo bg-white" onerror="this.src='https://via.placeholder.com/120'">
+            
+            <div class="d-flex gap-2">
+                <button class="btn {% if is_saved %}btn-secondary{% else %}btn-outline-secondary{% endif %} fw-bold rounded-pill toggle-save" data-id="{{ company.id }}">
+                    {% if is_saved %}<i class="bi bi-bookmark-fill me-1"></i> Saved{% else %}<i class="bi bi-bookmark me-1"></i> Save{% endif %}
+                </button>
+                <button class="btn {% if is_following %}btn-secondary{% else %}btn-linkedin{% endif %} fw-bold rounded-pill px-4 toggle-follow" data-id="{{ company.id }}">
+                    {% if is_following %}<i class="bi bi-check2 me-1"></i> Following{% else %}<i class="bi bi-plus-lg me-1"></i> Follow{% endif %}
+                </button>
+            </div>
+        </div>
+        
+        <h1 class="display-6 fw-bold mb-1">{{ company.name }}</h1>
+        <p class="fs-5 text-muted mb-2">{{ company.industry }} • {{ company.headquarters or 'Corporate Headquarters' }}</p>
+        
+        <div class="d-flex align-items-center mb-3">
+            <a href="{{ company.website or '#' }}" target="_blank" class="text-decoration-none fw-bold text-muted"><i class="bi bi-box-arrow-up-right me-1"></i> Visit Website</a>
+        </div>
+        
+        <p class="mb-0 text-dark" style="max-width: 800px;">{{ company.description }}</p>
+    </div>
+    
+    <!-- Nav Tabs -->
+    <ul class="nav nav-tabs px-3 flex-nowrap overflow-auto" id="companyTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active text-nowrap" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap" id="prep-tab" data-bs-toggle="tab" data-bs-target="#prep" type="button" role="tab">Preparation Guidelines</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab">Posts & Tips</button>
+        </li>
+    </ul>
+</div>
+
+<div class="tab-content" id="companyTabsContent">
+    
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0 h-100 bg-white rounded-3">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4">About the Company</h4>
+                        <p style="white-space: pre-line;">{{ company.description }}</p>
+                        
+                        <hr class="my-4 text-muted">
+                        
+                        <h5 class="fw-bold mb-3">Roles They Hire For</h5>
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            {% if company.hiring_roles %}
+                                {% for role in company.hiring_roles.split(',') %}
+                                <span class="badge bg-light text-dark border p-2 px-3 fw-normal fs-6 rounded-pill text-capitalize">{{ role.strip() }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No specific roles listed.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 bg-white rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Expected Compensation</h5>
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-cash-stack text-success fs-3 me-3"></i>
+                            <div>
+                                <h3 class="fw-bold text-dark mb-0">{{ company.package_range or 'N/A' }} <span class="fs-6 text-muted fw-normal">LPA</span></h3>
+                                <small class="text-muted">Average Package Range</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow-sm border-0 bg-white rounded-3">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Required Skills</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if company.required_skills %}
+                                {% for skill in company.required_skills.split(',') %}
+                                <span class="badge bg-secondary opacity-75 p-2 px-3 rounded-1">{{ skill.strip() }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No required skills listed.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preparation Tab -->
+    <div class="tab-pane fade" id="prep" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-md-5">
+                <div class="card shadow-sm border-0 h-100 bg-white rounded-3">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4"><i class="bi bi-clock-history text-muted me-2"></i>Hiring Process</h4>
+                        <div class="timeline mt-3">
+                            {% if company.hiring_process %}
+                                {% for round in company.hiring_process.split('|') %}
+                                <div class="timeline-item">
+                                    <h6 class="fw-bold mb-1">Round {{ loop.index }}</h6>
+                                    <p class="text-muted mb-0">{{ round.strip() }}</p>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Process details not available.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="card shadow-sm border-0 h-100 bg-white rounded-3">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4"><i class="bi bi-journal-text text-muted me-2"></i>Preparation Topics</h4>
+                        
+                        {% if company.prep_topics %}
+                            <div class="list-group list-group-flush rounded border">
+                            {% for topic in company.prep_topics.split('|') %}
+                                <div class="list-group-item d-flex align-items-start py-3 bg-light mb-2 rounded border-0">
+                                    <i class="bi bi-check-circle-fill text-success fs-5 me-3 mt-1"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-dark">{{ topic.strip() }}</h6>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No specific preparation topics listed yet.</p>
+                        {% endif %}
+                        
+                        <div class="mt-5 text-center p-4 bg-light rounded shadow-sm border">
+                            <h5 class="fw-bold mb-2">Ready to practice?</h5>
+                            <p class="text-muted mb-3">Test your skills in coding and aptitude to see where you stand.</p>
+                            <a href="{{ url_for('assessment.index') }}" class="btn btn-linkedin fw-bold rounded-pill px-4">Take a Practice Test</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Posts Tab -->
+    <div class="tab-pane fade" id="posts" role="tabpanel">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                {% if posts %}
+                    {% for post in posts %}
+                    <div class="card post-card bg-white shadow-sm border-0">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-3" style="width: 48px; height: 48px; font-size: 1.2rem;">
+                                    {{ post.user.name[0]|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">{{ post.user.name }}</h6>
+                                    <small class="text-muted">{{ post.created_at.strftime('%d %b %Y') }} • 
+                                        <span class="badge bg-light text-dark border">{{ post.post_type|capitalize }}</span>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <h5 class="fw-bold mb-2">{{ post.title }}</h5>
+                            <p class="mb-4" style="white-space: pre-line;">{{ post.content }}</p>
+                            
+                            <hr class="text-muted my-2">
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <button class="action-btn toggle-like {% if post.id in liked_post_ids %}active{% endif %}" data-id="{{ post.id }}">
+                                        <i class="bi {% if post.id in liked_post_ids %}bi-hand-thumbs-up-fill{% else %}bi-hand-thumbs-up{% endif %} fs-5 me-1"></i> 
+                                        <span class="like-count fw-normal">{{ post.likes|length if post.likes else 0 }}</span> Like
+                                    </button>
+                                    <button class="action-btn toggle-comment-section" data-target="comments-{{ post.id }}">
+                                        <i class="bi bi-chat-text fs-5 me-1"></i> <span class="comment-count fw-normal">{{ post.comments|length if post.comments else 0 }}</span> Comment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Comments Section (Hidden by default) -->
+                        <div class="bg-light p-3 border-top" id="comments-{{ post.id }}" style="display: none;">
+                            <div class="comments-list mb-3">
+                                {% for comment in post.comments %}
+                                <div class="d-flex mb-2">
+                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2 mt-1" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                        {{ comment.user.name[0]|upper }}
+                                    </div>
+                                    <div class="bg-white p-2 px-3 rounded text-dark shadow-sm" style="flex-grow: 1;">
+                                        <h6 class="fw-bold mb-0" style="font-size: 0.9rem;">{{ comment.user.name }}</h6>
+                                        <p class="mb-0" style="font-size: 0.9rem;">{{ comment.text }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <input type="text" class="form-control rounded-pill me-2 comment-input" placeholder="Add a comment...">
+                                <button class="btn btn-linkedin rounded-pill fw-bold submit-comment" data-id="{{ post.id }}">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="card shadow-sm border-0 bg-white text-center py-5 rounded-3">
+                        <i class="bi bi-journal-x text-muted mb-3" style="font-size: 3rem;"></i>
+                        <h4 class="text-dark fw-bold">No posts available</h4>
+                        <p class="text-muted">Be the first to share your interview experience!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body fw-bold" id="toastMessage">Success</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toastEl = document.getElementById('actionToast');
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    
+    function showToast(msg) {
+        document.getElementById('toastMessage').textContent = msg;
+        toast.show();
+    }
+
+    // Toggle Follow
+    document.querySelector('.toggle-follow').addEventListener('click', function() {
+        const btn = this;
+        fetch(`/company/api/follow/${btn.dataset.id}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.following) {
+                btn.classList.replace('btn-linkedin', 'btn-secondary');
+                btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Following';
+                showToast('Now following {{ company.name }}');
+            } else {
+                btn.classList.replace('btn-secondary', 'btn-linkedin');
+                btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i> Follow';
+                showToast('Unfollowed {{ company.name }}');
+            }
+        });
+    });
+
+    // Toggle Save
+    document.querySelector('.toggle-save').addEventListener('click', function() {
+        const btn = this;
+        fetch(`/company/api/save/${btn.dataset.id}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.saved) {
+                btn.classList.replace('btn-outline-secondary', 'btn-secondary');
+                btn.innerHTML = '<i class="bi bi-bookmark-fill me-1"></i> Saved';
+                showToast('Company saved to bookmarks');
+            } else {
+                btn.classList.replace('btn-secondary', 'btn-outline-secondary');
+                btn.innerHTML = '<i class="bi bi-bookmark me-1"></i> Save';
+                showToast('Removed from bookmarks');
+            }
+        });
+    });
+
+    // Toggle Like
+    document.querySelectorAll('.toggle-like').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const countSpan = this.querySelector('.like-count');
+            
+            fetch(`/company/api/like/${this.dataset.id}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                countSpan.textContent = data.count;
+                if (data.liked) {
+                    this.classList.add('active');
+                    icon.classList.replace('bi-hand-thumbs-up', 'bi-hand-thumbs-up-fill');
+                } else {
+                    this.classList.remove('active');
+                    icon.classList.replace('bi-hand-thumbs-up-fill', 'bi-hand-thumbs-up');
+                }
+            });
+        });
+    });
+
+    // Toggle Comment Section
+    document.querySelectorAll('.toggle-comment-section').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const el = document.getElementById(targetId);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        });
+    });
+
+    // Submit Comment
+    document.querySelectorAll('.submit-comment').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postId = this.dataset.id;
+            const section = document.getElementById(`comments-${postId}`);
+            const input = section.querySelector('.comment-input');
+            const list = section.querySelector('.comments-list');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            fetch(`/company/api/comment/${postId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) return;
+                
+                input.value = '';
+                
+                // Append locally
+                const newComment = document.createElement('div');
+                newComment.className = 'd-flex mb-2';
+                newComment.innerHTML = `
+                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2 mt-1" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                        ${data.author.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="bg-white p-2 px-3 rounded text-dark shadow-sm" style="flex-grow: 1;">
+                        <h6 class="fw-bold mb-0" style="font-size: 0.9rem;">${data.author}</h6>
+                        <p class="mb-0" style="font-size: 0.9rem;">${data.text}</p>
+                    </div>
+                `;
+                list.appendChild(newComment);
+                
+                // Update count
+                const card = this.closest('.post-card');
+                const countSpan = card.querySelector('.comment-count');
+                countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                showToast('Comment added');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

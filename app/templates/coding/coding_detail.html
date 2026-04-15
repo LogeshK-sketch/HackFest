@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}{{ problem.title }} - Practice{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row h-100">
+        <!-- LEFT PANEL: Problem Info -->
+        <div class="col-md-5 d-flex flex-column" style="max-height: 80vh; overflow-y: auto;">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <a href="{{ url_for('coding.coding_list') }}" class="btn btn-sm btn-outline-secondary">&larr; Back</a>
+                <h4 class="mb-0 fw-bold">{{ problem.title }}</h4>
+                {% set badge_color = 'success' if problem.difficulty == 'Easy' else 'warning text-dark' if problem.difficulty == 'Medium' else 'danger' %}
+                <span class="badge bg-{{ badge_color }}">{{ problem.difficulty }}</span>
+            </div>
+
+            <ul class="nav nav-tabs mb-3 shadow-sm bg-white rounded-top" id="problemTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold" id="desc-tab" data-bs-toggle="tab" data-bs-target="#desc" type="button" role="tab">Description</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold" id="sub-tab" data-bs-toggle="tab" data-bs-target="#sub" type="button" role="tab">Submissions</button>
+                </li>
+            </ul>
+
+            <div class="tab-content flex-grow-1 bg-white p-4 shadow-sm rounded-bottom rounded-end border border-top-0 mb-3" id="problemTabsContent">
+                <!-- Description Tab -->
+                <div class="tab-pane fade show active" id="desc" role="tabpanel">
+                    <div class="mb-4">
+                        <p style="white-space: pre-wrap;">{{ problem.description }}</p>
+                    </div>
+
+                    {% if problem.input_format or problem.output_format %}
+                    <div class="mb-4 bg-light p-3 rounded">
+                        <h6 class="fw-bold">Input/Output Format</h6>
+                        <p class="mb-1"><strong>Input:</strong> {{ problem.input_format }}</p>
+                        <p class="mb-0"><strong>Output:</strong> {{ problem.output_format }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if problem.constraints %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Constraints:</h6>
+                        <pre class="bg-light p-2 border rounded"><code>{{ problem.constraints }}</code></pre>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4 border-start border-4 border-info ps-3">
+                        <h6 class="fw-bold text-info-emphasis">Sample Case</h6>
+                        <strong>Input:</strong>
+                        <pre class="bg-light p-2 border rounded"><code>{{ problem.sample_input }}</code></pre>
+                        <strong>Output:</strong>
+                        <pre class="bg-light p-2 border rounded"><code>{{ problem.sample_output }}</code></pre>
+                        {% if problem.explanation %}
+                        <div class="mt-2 text-muted small"><strong>Explanation:</strong> {{ problem.explanation }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Submissions Tab -->
+                <div class="tab-pane fade" id="sub" role="tabpanel">
+                    {% if current_user.is_authenticated %}
+                        {% if submissions %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Result</th>
+                                        <th>Time</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for s in submissions %}
+                                    <tr>
+                                        <td>
+                                            {% if s.result == 'passed' %}
+                                                <span class="badge bg-success">Passed</span>
+                                            {% elif s.result == 'failed' %}
+                                                <span class="badge bg-danger">Failed</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Error</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-muted small">{{ s.execution_time }}s</td>
+                                        <td class="text-muted small">{{ s.created_at.strftime('%b %d, %H:%M') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center mt-4">You have no submissions yet.</p>
+                        {% endif %}
+                    {% else %}
+                    <div class="alert alert-warning text-center">
+                        You must <a href="{{ url_for('auth.login') }}">log in</a> to track submissions.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Code Editor -->
+        <div class="col-md-7 d-flex flex-column">
+            <div class="card shadow-sm border-0 flex-grow-1 d-flex flex-column">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <select class="form-select form-select-sm bg-secondary text-white border-secondary" style="width: auto;">
+                            <option value="python">Python 3</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button id="btnRun" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2">
+                            <span>Run Code</span>
+                            <div class="spinner-border spinner-border-sm text-light d-none" role="status" id="runSpn"></div>
+                        </button>
+                        {% if current_user.is_authenticated %}
+                        <button id="btnSubmit" class="btn btn-sm btn-success d-flex align-items-center gap-2">
+                            <span>Submit</span>
+                            <div class="spinner-border spinner-border-sm text-light d-none" role="status" id="subSpn"></div>
+                        </button>
+                        {% else %}
+                        <button disabled class="btn btn-sm btn-success">Submit (Login req)</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0 d-flex flex-column flex-grow-1 position-relative">
+                    <textarea id="codeEditor" class="form-control border-0 h-100 flex-grow-1 p-3 font-monospace bg-light" 
+                              style="resize: none; min-height: 400px; box-shadow: none;" spellcheck="false"
+                              placeholder="# Write your solution here...&#10;&#10;def solution():&#10;    pass"></textarea>
+                </div>
+            </div>
+
+            <!-- Output Section (Hidden initially) -->
+            <div id="outputSection" class="card shadow-sm border-0 mt-3 d-none border-top-0 border-start-0 border-end-0 border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Test Result</h5>
+                        <div id="outBadge"></div>
+                    </div>
+                    <div id="outTime" class="text-muted small mb-3"></div>
+                    
+                    <div id="runOutputBlock" class="d-none">
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="fw-bold text-muted small">Your Output</label>
+                                <pre id="runActual" class="bg-light p-2 rounded border" style="min-height: 50px;"></pre>
+                            </div>
+                            <div class="col-6">
+                                <label class="fw-bold text-muted small">Expected</label>
+                                <pre id="runExpected" class="bg-light p-2 rounded border" style="min-height: 50px;"></pre>
+                            </div>
+                        </div>
+                        <div id="runErrorBlock" class="d-none mt-2">
+                            <label class="fw-bold text-danger small">Error</label>
+                            <pre id="runError" class="bg-danger-subtle text-danger p-2 rounded border"></pre>
+                        </div>
+                    </div>
+
+                    <div id="subOutputBlock" class="d-none">
+                        <p id="subSummary" class="fw-bold mb-2"></p>
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-light"><tr><th>Input</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead>
+                                <tbody id="subTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const PROBLEM_ID = {{ problem.id }};
+    const codeEditor = document.getElementById('codeEditor');
+    const outSection = document.getElementById('outputSection');
+    const outBadge   = document.getElementById('outBadge');
+    const outTime    = document.getElementById('outTime');
+    
+    const runOutputBlock = document.getElementById('runOutputBlock');
+    const subOutputBlock = document.getElementById('subOutputBlock');
+
+    document.getElementById('btnRun').addEventListener('click', () => {
+        let btn = document.getElementById('btnRun');
+        let spn = document.getElementById('runSpn');
+        btn.disabled = true; spn.classList.remove('d-none');
+        outSection.classList.add('d-none');
+
+        fetch("{{ url_for('coding.run') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ problem_id: PROBLEM_ID, code: codeEditor.value })
+        })
+        .then(r => r.json())
+        .then(data => {
+            renderResult(data, 'run');
+        })
+        .catch(e => { alert("Network Error"); })
+        .finally(() => { 
+            btn.disabled = false; spn.classList.add('d-none'); 
+        });
+    });
+
+    {% if current_user.is_authenticated %}
+    document.getElementById('btnSubmit').addEventListener('click', () => {
+        let btn = document.getElementById('btnSubmit');
+        let spn = document.getElementById('subSpn');
+        btn.disabled = true; spn.classList.remove('d-none');
+        outSection.classList.add('d-none');
+
+        fetch("{{ url_for('coding.submit') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ problem_id: PROBLEM_ID, code: codeEditor.value })
+        })
+        .then(r => r.json())
+        .then(data => {
+            renderResult(data, 'submit');
+        })
+        .catch(e => { alert("Network Error"); })
+        .finally(() => { 
+            btn.disabled = false; spn.classList.add('d-none'); 
+        });
+    });
+    {% endif %}
+
+    function renderResult(data, mode) {
+        outSection.classList.remove('d-none');
+        outSection.classList.remove('border-danger', 'border-success', 'border-warning');
+        
+        let statusStr = (mode === 'submit') ? data.result : data.status;
+        outTime.innerText = `Execution Time: ${data.execution_time || 0}s`;
+
+        if (statusStr === 'passed') {
+            outSection.classList.add('border-success');
+            outBadge.innerHTML = '<span class="badge bg-success fs-6">Accepted</span>';
+        } else if (statusStr === 'failed') {
+            outSection.classList.add('border-danger');
+            outBadge.innerHTML = '<span class="badge bg-danger fs-6">Wrong Answer</span>';
+        } else {
+            outSection.classList.add('border-warning');
+            outBadge.innerHTML = '<span class="badge bg-warning text-dark fs-6">Error</span>';
+        }
+
+        if (mode === 'run') {
+            runOutputBlock.classList.remove('d-none');
+            subOutputBlock.classList.add('d-none');
+            document.getElementById('runActual').innerText = data.output || "No Output";
+            document.getElementById('runExpected').innerText = data.expected || "";
+            
+            if (data.error) {
+                document.getElementById('runErrorBlock').classList.remove('d-none');
+                document.getElementById('runError').innerText = data.error;
+            } else {
+                document.getElementById('runErrorBlock').classList.add('d-none');
+            }
+        } else {
+            runOutputBlock.classList.add('d-none');
+            subOutputBlock.classList.remove('d-none');
+            
+            document.getElementById('subSummary').innerText = `${data.passed} / ${data.total} Test Cases Passed`;
+            let tb = document.getElementById('subTableBody');
+            tb.innerHTML = '';
+            
+            if (data.error && data.details.length === 0) {
+                 tb.innerHTML = `<tr><td colspan="4" class="text-danger fw-bold">Execution Error: ${data.error}</td></tr>`;
+                 return;
+            }
+
+            data.details.forEach(tc => {
+                let tr = document.createElement('tr');
+                if(!tc.passed) tr.classList.add('table-danger');
+                tr.innerHTML = `
+                    <td style="max-width: 150px; overflow-x: auto;"><pre class="mb-0 small">${tc.input}</pre></td>
+                    <td><pre class="mb-0 small">${tc.expected}</pre></td>
+                    <td><pre class="mb-0 small">${tc.actual}</pre></td>
+                    <td>${tc.passed ? '<span class="text-success fw-bold">Pass</span>' : tc.error_message ? '<span class="text-danger fw-bold">Err</span>' : '<span class="text-danger fw-bold">Fail</span>'}</td>
+                `;
+                tb.appendChild(tr);
+            });
+        }
+    }
+</script>
+{% endblock %}

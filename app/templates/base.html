@@ -33,19 +33,22 @@
                 <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
                 </li>
                 <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('assessment.index') }}">Assessments</a>
+                <a class="nav-link" href="{{ url_for('assessment.index') }}">Tests</a>
                 </li>
                 <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('planner.index') }}">Study Planner</a>
+                <a class="nav-link" href="{{ url_for('leaderboard.index') }}">Leaderboard</a>
                 </li>
                 <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('ml.recommendations') }}">Recommendations</a>
+                <a class="nav-link" href="{{ url_for('resume.index') }}">Resume</a>
                 </li>
                 <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">Analytics</a>
+                <a class="nav-link" href="/coding/">Coding</a>
                 </li>
                 <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('resume.index') }}">Resume Analyzer</a>
+                <a class="nav-link" href="/company/">Company Prep</a>
+                </li>
+                <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('planner.study_plan') }}">Study Plan</a>
                 </li>
             {% elif current_user.role == 'admin' %}
                 <li class="nav-item">
@@ -62,6 +65,26 @@
       </ul>
       <ul class="navbar-nav ms-auto">
         {% if current_user.is_authenticated %}
+            <!-- Bell Start -->
+            <li class="nav-item dropdown me-2">
+              <a class="nav-link position-relative" href="#" id="notifBell" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bell-fill" viewBox="0 0 16 16">
+                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
+                </svg>
+                <span id="notifBadge" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.6rem;">
+                </span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notifBell" style="width: 300px; max-height: 400px; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom fw-bold bg-light">
+                  <span>Notifications</span>
+                  <button id="markAllRead" class="btn btn-sm btn-link text-decoration-none p-0">Mark all read</button>
+                </div>
+                <ul id="notifList" class="list-unstyled mb-0">
+                  <li class="text-center text-muted small py-3">Loading...</li>
+                </ul>
+              </div>
+            </li>
+            <!-- Bell End -->
             <li class="nav-item">
             <span class="nav-link text-light">Welcome, {{ current_user.name }}</span>
             </li>
@@ -98,6 +121,77 @@
 
 <!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{% if current_user.is_authenticated %}
+<script>
+// Notification bell logic
+function loadNotifications() {
+  fetch('/notifications/list')
+    .then(r => r.json())
+    .then(data => {
+      const list = document.getElementById('notifList');
+      const badge = document.getElementById('notifBadge');
+      const unread = data.notifications.filter(n => !n.is_read).length;
+
+      // Update badge
+      if (unread > 0) {
+        badge.textContent = unread;
+        badge.classList.remove('d-none');
+      } else {
+        badge.classList.add('d-none');
+      }
+
+      // Render notification items
+      if (data.notifications.length === 0) {
+        list.innerHTML = '<li class="text-center text-muted small py-3">No notifications yet.</li>';
+        return;
+      }
+      
+      list.innerHTML = data.notifications.map(n => `
+        <li class="px-3 py-2 border-bottom ${n.is_read ? '' : 'bg-light'}">
+          <div class="d-flex align-items-start gap-2">
+            <span class="badge rounded-pill mt-1 ${n.type==='success'?'bg-success':n.type==='warning'?'bg-warning text-dark':'bg-info text-dark'}" style="font-size:9px">&#9679;</span>
+            <div>
+              <p class="mb-0 small">${n.message}</p>
+              <p class="mb-0 text-muted" style="font-size:10px">${n.created_at}</p>
+            </div>
+          </div>
+        </li>`).join('');
+    })
+    .catch(() => {});
+}
+
+// Load on bell click (dropdown show event)
+document.getElementById('notifBell')?.addEventListener('click', loadNotifications);
+
+// Mark all read
+document.getElementById('markAllRead')?.addEventListener('click', () => {
+  fetch('/notifications/read-all', {method:'POST'})
+    .then(() => loadNotifications());
+});
+
+// Poll unread count every 60 seconds
+function pollUnreadCount() {
+  fetch('/notifications/unread-count')
+    .then(r => r.json())
+    .then(data => {
+      const badge = document.getElementById('notifBadge');
+      if (data.count > 0) {
+        badge.textContent = data.count;
+        badge.classList.remove('d-none');
+      } else {
+        badge.classList.add('d-none');
+      }
+    }).catch(() => {});
+}
+
+if (document.getElementById('notifBadge')) {
+    pollUnreadCount();
+    setInterval(pollUnreadCount, 60000);
+}
+</script>
+{% endif %}
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

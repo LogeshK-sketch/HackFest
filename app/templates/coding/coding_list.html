@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Coding Practice{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold mb-0">Coding Practice</h2>
+            <p class="text-muted mb-0">Prepare for technical interviews</p>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <div class="d-inline-flex gap-3 align-items-center bg-white border p-3 rounded shadow-sm">
+                <div class="text-center px-2">
+                    <h5 class="mb-0 fw-bold">{{ total_problems }}</h5>
+                    <small class="text-muted">Total</small>
+                </div>
+                <div class="border-start"></div>
+                <div class="text-center px-2 text-success">
+                    <h5 class="mb-0 fw-bold">{{ easy_count }}</h5>
+                    <small>Easy</small>
+                </div>
+                <div class="border-start"></div>
+                <div class="text-center px-2 text-warning">
+                    <h5 class="mb-0 fw-bold">{{ med_count }}</h5>
+                    <small>Medium</small>
+                </div>
+                <div class="border-start"></div>
+                <div class="text-center px-2 text-danger">
+                    <h5 class="mb-0 fw-bold">{{ hard_count }}</h5>
+                    <small>Hard</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('coding.coding_list') }}" class="row g-3">
+                <div class="col-md-4">
+                    <select name="difficulty" class="form-select">
+                        <option value="All Difficulties" {% if selected_diff == 'All Difficulties' or not selected_diff %}selected{% endif %}>All Difficulties</option>
+                        {% for d in diff_filters %}
+                            <option value="{{ d }}" {% if selected_diff == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="category" class="form-select">
+                        <option value="All Categories" {% if selected_cat == 'All Categories' or not selected_cat %}selected{% endif %}>All Categories</option>
+                        {% for c in cat_filters %}
+                            <option value="{{ c }}" {% if selected_cat == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if problems %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>Title</th>
+                            <th>Difficulty</th>
+                            <th>Category</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in problems %}
+                        <tr>
+                            <td class="ps-4">{{ p.id }}</td>
+                            <td>
+                                <a href="{{ url_for('coding.coding_detail', problem_id=p.id) }}" class="text-decoration-none fw-bold text-dark">
+                                    {{ p.title }}
+                                </a>
+                            </td>
+                            <td>
+                                {% set badge_color = 'success' if p.difficulty == 'Easy' else 'warning text-dark' if p.difficulty == 'Medium' else 'danger' %}
+                                <span class="badge bg-{{ badge_color }}">{{ p.difficulty }}</span>
+                            </td>
+                            <td>{{ p.category }}</td>
+                            <td>
+                                <a href="{{ url_for('coding.coding_detail', problem_id=p.id) }}" class="btn btn-sm btn-outline-primary">Solve</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white text-muted">
+                {{ problems|length }} problems found
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <h4 class="text-muted mb-3">No problems found</h4>
+        <p>There are currently no coding problems matching these filters.</p>
+        <a href="#" class="btn btn-outline-secondary mt-2">See Documentation</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

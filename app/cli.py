@@ -99,14 +99,70 @@ def seed_questions(csv_file, force_category):
 @with_appcontext
 def seed_coding():
     """
-    Shortcut: loads only data/coding_questions.csv.
-    Equivalent to: flask seed-questions --file data/coding_questions.csv
+    Loads coding problems from data/coding_problems.json into the database.
     """
-    from flask.cli import run_command
-    import sys
+    import os, json
+    import click
+    from app.models import CodingProblem
+    from app.extensions import db
+
+    db.create_all()
+
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    csv_file = os.path.join(base_dir, 'data', 'coding_questions.csv')
-    os.system(f"flask seed-questions --file {csv_file}")
+    json_file = os.path.join(base_dir, 'data', 'coding_problems.json')
+
+    problems = []
+    if os.path.exists(json_file):
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                problems = json.load(f)
+        except Exception as e:
+            click.echo(f"Warning: Error reading {json_file}: {e}")
+    
+    if not problems:
+        click.echo("Warning: JSON missing or empty. Creating 10 sample problems inline.")
+        problems = [
+            {"title": "Two Sum", "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.", "difficulty": "Easy", "category": "Arrays", "input_format": "First line: array of integers. Second line: target integer.", "output_format": "List of two indices.", "constraints": "2 <= nums.length <= 10^4", "sample_input": "[2, 7, 11, 15]\n9", "sample_output": "[0, 1]", "explanation": "nums[0] + nums[1] == 9, return [0, 1]", "test_cases": [{"input": "[2,7,11,15]\n9", "expected_output": "[0, 1]"}]},
+            {"title": "Palindrome Number", "description": "Given an integer x, return true if x is a palindrome, and false otherwise.", "difficulty": "Easy", "category": "Math", "input_format": "A single integer x.", "output_format": "true or false string.", "constraints": "-2^31 <= x <= 2^31 - 1", "sample_input": "121", "sample_output": "true", "explanation": "Reads the same forwards and backwards.", "test_cases": [{"input": "121", "expected_output": "true"}]},
+            {"title": "Reverse Integer", "description": "Given a signed 32-bit integer x, return x with its digits reversed.", "difficulty": "Medium", "category": "Math", "input_format": "Integer", "output_format": "Integer", "constraints": "...", "sample_input": "123", "sample_output": "321", "explanation": "...", "test_cases": [{"input": "123", "expected_output": "321"}]},
+            {"title": "Valid Parentheses", "description": "Determine if the input string is valid.", "difficulty": "Easy", "category": "Stacks", "input_format": "String", "output_format": "Boolean", "constraints": "...", "sample_input": "()", "sample_output": "true", "explanation": "...", "test_cases": [{"input": "()", "expected_output": "true"}]},
+            {"title": "Maximum Subarray", "description": "Find the contiguous subarray with largest sum.", "difficulty": "Medium", "category": "Dynamic Programming", "input_format": "Array", "output_format": "Integer", "constraints": "...", "sample_input": "[-2,1,-3,4,-1,2,1,-5,4]", "sample_output": "6", "explanation": "...", "test_cases": [{"input": "[-2,1,-3,4,-1,2,1,-5,4]", "expected_output": "6"}]},
+            {"title": "Climbing Stairs", "description": "How many distinct ways can you climb n steps?", "difficulty": "Easy", "category": "Dynamic Programming", "input_format": "Integer", "output_format": "Integer", "constraints": "...", "sample_input": "2", "sample_output": "2", "explanation": "...", "test_cases": [{"input": "2", "expected_output": "2"}]},
+            {"title": "Merge String Alternately", "description": "Merge strings alternately.", "difficulty": "Easy", "category": "Strings", "input_format": "Two strings", "output_format": "String", "constraints": "...", "sample_input": "abc\npqr", "sample_output": "apbqcr", "explanation": "...", "test_cases": [{"input": "abc\npqr", "expected_output": "apbqcr"}]},
+            {"title": "Single Number", "description": "Find the single element in array.", "difficulty": "Easy", "category": "Bit Manipulation", "input_format": "Array", "output_format": "Integer", "constraints": "...", "sample_input": "[2,2,1]", "sample_output": "1", "explanation": "...", "test_cases": [{"input": "[2,2,1]", "expected_output": "1"}]},
+            {"title": "Contains Duplicate", "description": "Return true if duplicate exists.", "difficulty": "Easy", "category": "Arrays", "input_format": "Array", "output_format": "Boolean", "constraints": "...", "sample_input": "[1,2,3,1]", "sample_output": "true", "explanation": "...", "test_cases": [{"input": "[1,2,3,1]", "expected_output": "true"}]},
+            {"title": "Container With Most Water", "description": "Find max water container.", "difficulty": "Medium", "category": "Greedy", "input_format": "Array", "output_format": "Integer", "constraints": "...", "sample_input": "[1,8,6,2,5,4,8,3,7]", "sample_output": "49", "explanation": "...", "test_cases": [{"input": "[1,8,6,2,5,4,8,3,7]", "expected_output": "49"}]}
+        ]
+
+    inserted = 0
+    skipped = 0
+
+    for p in problems:
+        if CodingProblem.query.filter_by(title=p.get('title')).first():
+            click.echo(f"Skipped (duplicate): {p.get('title')}")
+            skipped += 1
+            continue
+        
+        tc = p.get('test_cases', [])
+        new_prob = CodingProblem(
+            title=p.get('title'),
+            description=p.get('description', ''),
+            difficulty=p.get('difficulty', 'Easy'),
+            category=p.get('category', 'Uncategorized'),
+            input_format=p.get('input_format', ''),
+            output_format=p.get('output_format', ''),
+            constraints=p.get('constraints', ''),
+            sample_input=p.get('sample_input', ''),
+            sample_output=p.get('sample_output', ''),
+            explanation=p.get('explanation', ''),
+            test_cases=json.dumps(tc)
+        )
+        db.session.add(new_prob)
+        inserted += 1
+        click.echo(f"Inserted: {p.get('title')}")
+
+    db.session.commit()
+    click.echo(f"\nSeeding complete. {inserted} problems inserted, {skipped} skipped.")
 
 
 @cli_bp.cli.command('seed-core')

@@ -92,6 +92,7 @@
                 const missing = data.missing_skills.map(s => `<span class="badge bg-danger me-1 mb-1 p-2">${s}</span>`).join('');
                 const suggestions = data.suggestions.map(s => `<li class="list-group-item px-0 border-0 py-1"><i class="bi bi-check2 text-info me-2"></i>${s}</li>`).join('');
                 
+                const projects = data.projects_detected.map(p => `<li>${p}</li>`).join('');
                 document.getElementById('modalBody').innerHTML = `
                     <div class="mb-4">
                         <h6 class="text-muted text-uppercase small fw-bold">File Information</h6>
@@ -99,13 +100,19 @@
                         <p class="mb-0"><strong>Analyzed On:</strong> ${data.uploaded_at}</p>
                     </div>
                     <div class="mb-4 d-flex justify-content-between align-items-center bg-light p-3 rounded">
-                        <h6 class="text-muted text-uppercase small fw-bold mb-0">Overall Score</h6>
-                        <h3 class="mb-0 fw-bold ${data.score >= 70 ? 'text-success' : data.score >= 40 ? 'text-warning' : 'text-danger'}">${data.score} <span class="fs-6 text-muted">/ 100</span></h3>
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Overall Score</h6>
+                            <h3 class="mb-0 fw-bold ${data.score >= 70 ? 'text-success' : data.score >= 40 ? 'text-warning' : 'text-danger'}">${data.score} <span class="fs-6 text-muted">/ 100</span></h3>
+                        </div>
+                        <div class="text-end">
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Role Type</h6>
+                            <span class="badge bg-primary px-3 py-2">${data.experience_level || 'Unknown'}</span>
+                        </div>
                     </div>
                     
                     <div class="row mb-4">
                         <div class="col-md-6 mb-3 mb-md-0">
-                            <h6 class="text-success text-uppercase small fw-bold mb-2">Matched Skills</h6>
+                            <h6 class="text-success text-uppercase small fw-bold mb-2">Capabilities Found</h6>
                             <div>${matched || '<span class="text-muted">None detected</span>'}</div>
                         </div>
                         <div class="col-md-6">
@@ -114,8 +121,15 @@
                         </div>
                     </div>
                     
+                    <div class="mb-4">
+                        <h6 class="text-secondary text-uppercase small fw-bold mb-2">Projects Detected</h6>
+                        <ul class="text-muted small">
+                            ${projects || '<li>No explicit projects identified.</li>'}
+                        </ul>
+                    </div>
+
                     <div>
-                        <h6 class="text-info text-uppercase small fw-bold mb-2">Suggestions for Improvement</h6>
+                        <h6 class="text-info text-uppercase small fw-bold mb-2">Actionable Suggestions</h6>
                         <ul class="list-group list-group-flush">
                             ${suggestions || '<li class="list-group-item text-muted">No suggestions. Your resume looks great!</li>'}
                         </ul>

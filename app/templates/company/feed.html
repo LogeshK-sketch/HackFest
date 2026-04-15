@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}My Company Feed{% endblock %}
+
+{% block content %}
+<style>
+    .linkedin-blue { color: #0a66c2; }
+    .bg-linkedin { background-color: #0a66c2; color: white; }
+    .btn-outline-linkedin { border-color: #0a66c2; color: #0a66c2; }
+    .btn-outline-linkedin:hover { background-color: #f3f9fe; border-color: #0a66c2; color: #0a66c2; }
+    .btn-linkedin { background-color: #0a66c2; color: white; border: none; }
+    .btn-linkedin:hover { background-color: #004182; color: white; }
+    
+    .post-card { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 15px; }
+    .action-btn { background: none; border: none; color: #666; font-weight: 600; padding: 8px 12px; border-radius: 4px; transition: 0.2s; }
+    .action-btn:hover { background: rgba(0,0,0,0.05); color: #333; }
+    .action-btn.active { color: #0a66c2; }
+    
+    .company-logo-sm { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; border: 1px solid #eee; }
+    .company-logo-xs { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; border: 1px solid #eee; }
+    
+    .sidebar-widget { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 20px; overflow: hidden; background: white; }
+    .sidebar-widget-header { padding: 15px; font-weight: bold; border-bottom: 1px solid #eee; background: #fbfbfb; }
+</style>
+
+<div class="row g-4">
+    <!-- Left Sidebar -->
+    <div class="col-md-3 d-none d-md-block">
+        <div class="sidebar-widget shadow-sm border-0">
+            <div class="sidebar-widget-header bg-white pb-2 border-0">
+                Companies You Follow
+            </div>
+            <div class="p-3 pt-0">
+                {% if followed_companies %}
+                    <ul class="list-unstyled mb-0">
+                    {% for fc in followed_companies %}
+                        <li class="mb-3 d-flex align-items-center">
+                            <img src="{{ fc.logo_url or 'https://via.placeholder.com/40' }}" alt="{{ fc.name }}" class="company-logo-xs me-2" onerror="this.src='https://via.placeholder.com/40'">
+                            <div>
+                                <a href="{{ url_for('company.profile', company_id=fc.id) }}" class="text-dark fw-bold text-decoration-none d-block lh-1" style="font-size: 0.9rem;">{{ fc.name }}</a>
+                                <small class="text-muted" style="font-size: 0.75rem;">{{ fc.industry }}</small>
+                            </div>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted small text-center my-3">You aren't following any companies yet.</p>
+                {% endif %}
+                
+                <a href="{{ url_for('company.index') }}" class="btn btn-outline-secondary btn-sm w-100 mt-2 rounded-pill fw-bold">Discover More</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Feed Area -->
+    <div class="col-md-6">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Your Feed</h4>
+            <a href="{{ url_for('company.index') }}" class="btn btn-sm btn-outline-linkedin fw-bold rounded-pill"><i class="bi bi-search me-1"></i>Find Companies</a>
+        </div>
+        
+        {% if posts %}
+            {% for post in posts %}
+            <div class="card post-card bg-white shadow-sm border-0">
+                <div class="card-body p-4 pb-3">
+                    <div class="d-flex justify-content-between">
+                        <div class="d-flex align-items-center mb-3">
+                            <a href="{{ url_for('company.profile', company_id=post.company.id) }}">
+                                <img src="{{ post.company.logo_url or 'https://via.placeholder.com/40' }}" class="company-logo-sm me-3" alt="{{ post.company.name }}" onerror="this.src='https://via.placeholder.com/40'">
+                            </a>
+                            <div>
+                                <a href="{{ url_for('company.profile', company_id=post.company.id) }}" class="text-dark fw-bold text-decoration-none lh-1">{{ post.company.name }}</a>
+                                <div class="text-muted small mt-1">
+                                    Posted by {{ post.user.name }} • {{ post.created_at.strftime('%d %b') }}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark border">{{ post.post_type|capitalize }}</span>
+                        </div>
+                    </div>
+                    
+                    <h5 class="fw-bold mb-2">{{ post.title }}</h5>
+                    <p class="mb-3" style="white-space: pre-line;">{{ post.content }}</p>
+                    
+                    <hr class="text-muted my-2">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button class="action-btn toggle-like {% if post.id in liked_post_ids %}active{% endif %}" data-id="{{ post.id }}">
+                                <i class="bi {% if post.id in liked_post_ids %}bi-hand-thumbs-up-fill{% else %}bi-hand-thumbs-up{% endif %} fs-5 me-1"></i> 
+                                <span class="like-count fw-normal">{{ post.likes|length }}</span> Like
+                            </button>
+                            <button class="action-btn toggle-comment-section" data-target="comments-{{ post.id }}">
+                                <i class="bi bi-chat-text fs-5 me-1"></i> <span class="comment-count fw-normal">{{ post.comments|length }}</span> Comment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Comments Section (Hidden by default) -->
+                <div class="bg-light p-3 border-top" id="comments-{{ post.id }}" style="display: none;">
+                    <div class="comments-list mb-3">
+                        {% for comment in post.comments %}
+                        <div class="d-flex mb-2">
+                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2 mt-1" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                {{ comment.user.name[0]|upper }}
+                            </div>
+                            <div class="bg-white p-2 px-3 rounded text-dark shadow-sm" style="flex-grow: 1;">
+                                <h6 class="fw-bold mb-0" style="font-size: 0.9rem;">{{ comment.user.name }}</h6>
+                                <p class="mb-0" style="font-size: 0.9rem;">{{ comment.text }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <input type="text" class="form-control rounded-pill me-2 comment-input" placeholder="Add a comment...">
+                        <button class="btn btn-linkedin rounded-pill fw-bold submit-comment" data-id="{{ post.id }}">Post</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="card shadow-sm border-0 bg-white text-center py-5 rounded-3">
+                <i class="bi bi-person-lines-fill text-muted mb-3" style="font-size: 3rem;"></i>
+                <h4 class="text-dark fw-bold">Your feed is quiet</h4>
+                <p class="text-muted">Follow companies to see their latest posts and interview tips.</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('company.index') }}" class="btn btn-linkedin fw-bold rounded-pill">Find Companies</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Right Sidebar -->
+    <div class="col-md-3 d-none d-md-block">
+        <div class="sidebar-widget shadow-sm border-0">
+            <div class="sidebar-widget-header bg-white pb-2 border-0 d-flex justify-content-between align-items-center">
+                <span>Add to your feed</span>
+                <i class="bi bi-info-square-fill text-muted"></i>
+            </div>
+            <div class="p-3 pt-0">
+                {% if recommended %}
+                    {% for rec in recommended %}
+                    <div class="d-flex align-items-start mb-3">
+                        <img src="{{ rec.logo_url or 'https://via.placeholder.com/40' }}" alt="{{ rec.name }}" class="company-logo-xs me-2 mt-1" onerror="this.src='https://via.placeholder.com/40'">
+                        <div class="flex-grow-1">
+                            <a href="{{ url_for('company.profile', company_id=rec.id) }}" class="text-dark fw-bold text-decoration-none d-block lh-1" style="font-size: 0.9rem;">{{ rec.name }}</a>
+                            <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">{{ rec.industry }}</small>
+                            <button class="btn btn-sm btn-outline-dark rounded-pill fw-bold py-0 toggle-follow-small" style="font-size: 0.75rem;" data-id="{{ rec.id }}">
+                                + Follow
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <a href="{{ url_for('company.index') }}" class="text-decoration-none fw-bold small text-muted">View all recommendations <i class="bi bi-arrow-right"></i></a>
+                {% else %}
+                    <p class="text-muted small">You are following all available companies!</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <small class="text-muted">HackFest Smart Placement System © 2026</small>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Toggle Follow (Small Buttons in Sidebar)
+    document.querySelectorAll('.toggle-follow-small').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const companyId = this.dataset.id;
+            fetch(`/company/api/follow/${companyId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.following) {
+                    this.textContent = 'Following';
+                    this.classList.replace('btn-outline-dark', 'btn-dark');
+                } else {
+                    this.textContent = '+ Follow';
+                    this.classList.replace('btn-dark', 'btn-outline-dark');
+                }
+            });
+        });
+    });
+
+    // Toggle Like
+    document.querySelectorAll('.toggle-like').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const countSpan = this.querySelector('.like-count');
+            
+            fetch(`/company/api/like/${this.dataset.id}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                countSpan.textContent = data.count;
+                if (data.liked) {
+                    this.classList.add('active');
+                    icon.classList.replace('bi-hand-thumbs-up', 'bi-hand-thumbs-up-fill');
+                } else {
+                    this.classList.remove('active');
+                    icon.classList.replace('bi-hand-thumbs-up-fill', 'bi-hand-thumbs-up');
+                }
+            });
+        });
+    });
+
+    // Toggle Comment Section
+    document.querySelectorAll('.toggle-comment-section').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const el = document.getElementById(targetId);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        });
+    });
+
+    // Submit Comment
+    document.querySelectorAll('.submit-comment').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postId = this.dataset.id;
+            const section = document.getElementById(`comments-${postId}`);
+            const input = section.querySelector('.comment-input');
+            const list = section.querySelector('.comments-list');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            fetch(`/company/api/comment/${postId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) return;
+                
+                input.value = '';
+                
+                // Append locally
+                const newComment = document.createElement('div');
+                newComment.className = 'd-flex mb-2';
+                newComment.innerHTML = `
+                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2 mt-1" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                        ${data.author.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="bg-white p-2 px-3 rounded text-dark shadow-sm" style="flex-grow: 1;">
+                        <h6 class="fw-bold mb-0" style="font-size: 0.9rem;">${data.author}</h6>
+                        <p class="mb-0" style="font-size: 0.9rem;">${data.text}</p>
+                    </div>
+                `;
+                list.appendChild(newComment);
+                
+                // Update count
+                const card = this.closest('.post-card');
+                const countSpan = card.querySelector('.comment-count');
+                countSpan.textContent = parseInt(countSpan.textContent) + 1;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

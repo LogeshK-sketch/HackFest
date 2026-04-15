@@ -42,6 +42,8 @@ def create_app(config_class=DevelopmentConfig):
     from app.company_prep.routes import company_prep_bp
     from app.leaderboard.routes import leaderboard_bp
     from app.coding.routes import coding_bp
+    from app.company.routes import company_bp
+    from app.study.routes import study_bp
     
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -55,6 +57,8 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(company_prep_bp, url_prefix='/company_prep')
     app.register_blueprint(leaderboard_bp, url_prefix='/leaderboard')
     app.register_blueprint(coding_bp, url_prefix='/coding')
+    app.register_blueprint(company_bp, url_prefix='/company')
+    app.register_blueprint(study_bp, url_prefix='/study')
 
     # Register custom CLI commands
     from app.cli import cli_bp

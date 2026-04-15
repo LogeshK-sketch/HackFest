@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+{% block content %}
+
+<div class="container py-4">
+    <!-- 1. Page heading row -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Leaderboard</h2>
+        <span class="badge rounded-pill bg-info text-dark fs-6 py-2 px-3 shadow-sm border border-info">
+            Your rank: #{{ current_rank or 'N/A' }}
+        </span>
+    </div>
+
+    <!-- 2. PODIUM SECTION (top 3 only) -->
+    <div class="row pt-4 mb-5 justify-content-center align-items-end g-3">
+        {% if entries|length > 0 %}
+            <!-- Rank 2 -->
+            {% if entries|length > 1 %}
+            <div class="col-md-3" style="order: 1">
+                <div class="card shadow-sm text-center border-0" style="min-height: 180px;">
+                    <div class="card-body">
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-2 fw-bold" style="width: 40px; height: 40px;">
+                            {{ entries[1].initials }}
+                        </div>
+                        <h6 class="fw-bold mb-1">{{ entries[1].username }}</h6>
+                        <div class="fs-5 fw-bold text-primary mb-2">{{ entries[1].total_score }}</div>
+                        <span class="badge rounded-pill {% if entries[1].badge == 'Advanced' %}bg-success{% elif entries[1].badge == 'Intermediate' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            {{ entries[1].badge }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Rank 1 -->
+            <div class="col-md-4" style="order: 2">
+                <div class="card shadow text-center border-2 border-warning" style="min-height: 220px; z-index: 10;">
+                    <div class="card-body py-4">
+                        <div class="text-warning fs-1" style="margin-top: -30px; margin-bottom: -10px;">★</div>
+                        <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center mx-auto mb-3 fw-bold shadow-sm" style="width: 50px; height: 50px; font-size: 18px;">
+                            {{ entries[0].initials }}
+                        </div>
+                        <h5 class="fw-bold mb-1">{{ entries[0].username }}</h5>
+                        <div class="fs-4 fw-bold text-primary mb-2">{{ entries[0].total_score }} pts</div>
+                        <span class="badge rounded-pill {% if entries[0].badge == 'Advanced' %}bg-success{% elif entries[0].badge == 'Intermediate' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            {{ entries[0].badge }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rank 3 -->
+            {% if entries|length > 2 %}
+            <div class="col-md-3" style="order: 3">
+                <div class="card shadow-sm text-center border-0" style="min-height: 180px;">
+                    <div class="card-body">
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center mx-auto mb-2 fw-bold" style="width: 40px; height: 40px; background: #cd7f32;">
+                            {{ entries[2].initials }}
+                        </div>
+                        <h6 class="fw-bold mb-1">{{ entries[2].username }}</h6>
+                        <div class="fs-5 fw-bold text-primary mb-2">{{ entries[2].total_score }}</div>
+                        <span class="badge rounded-pill {% if entries[2].badge == 'Advanced' %}bg-success{% elif entries[2].badge == 'Intermediate' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            {{ entries[2].badge }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- 3. MAIN TABLE (rank 4 to 50) -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted">
+                    <tr>
+                        <th class="ps-4">Rank</th>
+                        <th>User</th>
+                        <th>Score</th>
+                        <th>Tests Taken</th>
+                        <th>Badge</th>
+                        <th class="pe-4">Last Active</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    {% for entry in entries %}
+                    {% if entry.rank > 3 %}
+                    <tr class="{% if entry.username == current_username %}table-warning fw-semibold{% endif %}">
+                        <td class="ps-4"><span class="text-muted">#{{ entry.rank }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 32px; height: 32px; font-size: 12px;">
+                                    {{ entry.initials }}
+                                </div>
+                                {{ entry.username }}
+                                {% if entry.username == current_username %}
+                                    <span class="badge bg-info text-dark ms-1" style="font-size: 9px;">You</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="fw-semibold">{{ entry.total_score }}</td>
+                        <td>{{ entry.tests_taken }}</td>
+                        <td>
+                            <span class="badge rounded-pill {% if entry.badge == 'Advanced' %}bg-success{% elif entry.badge == 'Intermediate' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {{ entry.badge }}
+                            </span>
+                        </td>
+                        <td class="pe-4 text-muted small">{{ entry.last_updated }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// 4. Auto-refresh JavaScript
+function refreshLeaderboard() {
+    fetch('/leaderboard/api')
+        .then(r => r.json())
+        .then(data => {
+            const tbody = document.getElementById('leaderboardBody');
+            const currentUsername = "{{ current_username }}";
+            tbody.innerHTML = data.entries
+                .filter(e => e.rank > 3)
+                .map(e => `
+                    <tr class="${e.username === currentUsername ? 'table-warning fw-semibold' : ''}">
+                        <td class="ps-4"><span class="text-muted">#${e.rank}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:32px; height:32px; font-size:12px;">
+                                    ${e.initials}
+                                </div>
+                                ${e.username}
+                                ${e.username === currentUsername ? '<span class="badge bg-info text-dark ms-1" style="font-size:9px;">You</span>' : ''}
+                            </div>
+                        </td>
+                        <td class="fw-semibold">${e.total_score}</td>
+                        <td>${e.tests_taken}</td>
+                        <td><span class="badge rounded-pill ${e.badge === 'Advanced' ? 'bg-success' : e.badge === 'Intermediate' ? 'bg-primary' : 'bg-secondary'}">${e.badge}</span></td>
+                        <td class="pe-4 text-muted small">${e.last_updated}</td>
+                    </tr>
+                `).join('');
+        }).catch(() => {});
+}
+setInterval(refreshLeaderboard, 60000);
+</script>
+
+{% endblock %}

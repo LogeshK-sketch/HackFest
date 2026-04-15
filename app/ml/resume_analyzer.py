@@ -1,26 +1,16 @@
-"""Resume text analysis and scoring module."""
-import json, re
+# pip install: google-genai tenacity
+# Required imports:
+import os
+import json
+import logging
 from PyPDF2 import PdfReader
+from google import genai
+from google.genai import types
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from google.genai.errors import APIError
 
-SKILLS_LIST = [
-    "Python", "Java", "C++", "C", "DSA", "SQL", "DBMS", "OS",
-    "Computer Networks", "CN", "Machine Learning", "ML",
-    "HTML", "CSS", "JavaScript", "React", "Flask", "Django",
-    "Git", "Linux", "REST API", "OOP", "System Design",
-    "Data Structures", "Algorithms", "Pandas", "NumPy"
-]
-
-PLACEMENT_CRITICAL = [
-    "DSA", "SQL", "Python", "OOP", "OS", "DBMS",
-    "Computer Networks", "System Design", "Git", "Data Structures"
-]
-
-SECTION_KEYWORDS = {
-    "experience": ["experience", "internship", "worked", "employed", "work history"],
-    "projects":   ["project", "built", "developed", "implemented", "created"],
-    "education":  ["education", "university", "college", "degree", "b.tech", "b.e", "bachelor"],
-    "contact":    ["email", "phone", "linkedin", "github", "@"]
-}
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def extract_text_from_pdf(filepath: str) -> str:
     """Open PDF with PdfReader, iterate all pages,
@@ -33,72 +23,89 @@ def extract_text_from_pdf(filepath: str) -> str:
             if extracted:
                 text += extracted + "\n"
     except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
+        logger.error(f"Error extracting text from PDF: {e}")
     return text
 
-def detect_skills(text: str) -> tuple:
-    """For each skill in SKILLS_LIST, use:
-      re.search(r'\b' + re.escape(skill) + r'\b', text, re.IGNORECASE)
-    Return (matched_skills_list, missing_skills_list)."""
-    matched_skills = []
-    missing_skills = []
-    for skill in SKILLS_LIST:
-        if re.search(r'\b' + re.escape(skill) + r'\b', text, re.IGNORECASE):
-            matched_skills.append(skill)
-        else:
-            missing_skills.append(skill)
-    return matched_skills, missing_skills
+# The tenacity decorator retries up to 3 times, with exponential backoff (e.g. 2s, 4s, 8s)
+# if we hit a 429 quota exception specifically.
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=2, min=2, max=15),
+    retry=retry_if_exception_type(APIError),
+    reraise=True
+)
+def extract_gemini_json_with_retry(client, text):
+    """Makes the API call using the new SDK."""
+    prompt = f"""
+    You are an expert ATS (Applicant Tracking System) and resume evaluator.
+    Analyze the resume text below and return ONLY a valid JSON object —
+    no markdown, no explanation, no extra text.
 
-def detect_sections(text: str) -> dict:
-    """For each section in SECTION_KEYWORDS, check if any
-    keyword appears in text.lower(). Return dict of bool values."""
-    sections = {}
-    text_lower = text.lower()
-    for section, keywords in SECTION_KEYWORDS.items():
-        sections[section] = any(kw in text_lower for kw in keywords)
-    return sections
+    Evaluate the resume against modern industry standards and return:
+    - skills_found: technical and soft skills explicitly mentioned
+    - skills_missing: relevant industry skills absent from the resume
+      (infer from the role level and domain detected)
+    - projects_detected: any projects, case studies, or portfolio items
+    - experience_level: classify as "Junior", "Mid", or "Senior"
+    - suggestions: 3–5 specific, actionable improvements to boost ATS ranking
+    - score: integer ATS compatibility score from 0 to 100
 
-def generate_suggestions(missing_skills: list, sections: dict, text: str) -> list:
-    """Return up to 6 suggestions."""
-    suggestions = []
+    Resume Text:
+    {text}
+    """
     
-    critical_missing = [s for s in PLACEMENT_CRITICAL if s in missing_skills]
-    for skill in critical_missing[:3]:
-        suggestions.append(f"Add {skill} projects or coursework to strengthen your profile.")
-        if len(suggestions) >= 6: return suggestions
-        
-    if not sections.get('experience'):
-        suggestions.append("Include an Experience or Internship section.")
-        if len(suggestions) >= 6: return suggestions
-        
-    if not sections.get('projects'):
-        suggestions.append("Add a Projects section with 2-3 technical projects.")
-        if len(suggestions) >= 6: return suggestions
-        
-    text_lower = text.lower()
-    if 'github' not in text_lower:
-        suggestions.append("Add your GitHub profile URL (github.com/yourusername).")
-        if len(suggestions) >= 6: return suggestions
-        
-    if 'linkedin' not in text_lower:
-        suggestions.append("Include your LinkedIn profile link.")
-        
-    return suggestions[:6]
+    # Send the request with application/json mapping
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.2
+        )
+    )
+    return response.text
 
-def analyze_resume(text: str) -> dict:
-    """Calls detect_skills, detect_sections, generate_suggestions."""
-    matched_skills, missing_skills = detect_skills(text)
-    sections = detect_sections(text)
-    suggestions = generate_suggestions(missing_skills, sections, text)
+def analyze_resume_with_gemini(text: str) -> dict:
+    """
+    Analyzes resume text using the Gemini API to extract ATS-optimized
+    insights, skills, and overall compatibility scores based on industry standards.
+    """
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("Missing GEMINI_API_KEY environment variable")
+        
+    client = genai.Client(api_key=api_key)
     
-    base = round((len(matched_skills) / len(SKILLS_LIST)) * 60)
-    bonus = 10 * sum(1 for v in sections.values() if v)
-    score = min(base + bonus, 100)
-    
-    return {
-      'matched_skills': matched_skills,
-      'missing_skills': missing_skills,
-      'score': int(score),
-      'suggestions': suggestions,
-      'sections': sections
+    fallback_response = {
+        "skills_found": [],
+        "skills_missing": [],
+        "projects_detected": [],
+        "experience_level": "",
+        "suggestions": [],
+        "score": 0
     }
+
+    try:
+        response_text = extract_gemini_json_with_retry(client, text)
+        
+        # Parse output safely
+        parsed_json = json.loads(response_text.strip())
+        
+        for k, v in fallback_response.items():
+            if k not in parsed_json:
+                parsed_json[k] = v
+                
+        return parsed_json
+        
+    except Exception as e:
+        logger.error(f"Gemini API extraction failed: {e}")
+        return fallback_response
+
+# Example Flask route integration:
+#
+# @app.route('/analyze', methods=['POST'])
+# def analyze():
+#     file = request.files['resume']
+#     text = extract_text_from_pdf(file)          # existing function
+#     result = analyze_resume_with_gemini(text)   # new Gemini function
+#     return jsonify(result)

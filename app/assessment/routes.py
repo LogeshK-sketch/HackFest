@@ -124,6 +124,22 @@ def submit():
     db.session.add(attempt)
     db.session.commit() # Save attempt first, then we update user scores
     
+    # --- ADDED IN STEP 3 ---
+    from app.utils import update_leaderboard, push_notification
+
+    # Update leaderboard after every test submission
+    update_leaderboard(current_user.id)
+
+    # Push score-based notification
+    score = attempt.score  # use whatever variable holds the saved score
+    if score < 40:
+        push_notification(current_user.id,
+            "Your score was below 40. Focus on weak areas today!", type='warning')
+    elif score >= 80:
+        push_notification(current_user.id,
+            f"Great job! You scored {score}. Keep it up!", type='success')
+    # -----------------------
+
     # MODIFIED: After saving TestAttempt, recalculate and update User score
     submitted_category = session['test_meta']['category']
     # ADDED IMPORT: get_category_score

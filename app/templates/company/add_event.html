@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Add Placement Event{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="fw-bold mb-0">Add Placement Event</h4>
+                        <a href="{{ url_for('company.calendar') }}" class="btn btn-sm btn-outline-secondary">Go to Calendar</a>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('admin.add_event') }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Company Name <span class="text-danger">*</span></label>
+                                <input type="text" name="company_name" class="form-control" required placeholder="e.g. Amazon">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Role <span class="text-danger">*</span></label>
+                                <select name="role" class="form-select" id="roleSelect" required>
+                                    <option value="" selected disabled>Select Role</option>
+                                    <option value="SDE-1">SDE-1</option>
+                                    <option value="Software Engineer">Software Engineer</option>
+                                    <option value="Data Analyst">Data Analyst</option>
+                                    <option value="System Engineer">System Engineer</option>
+                                    <option value="other">Other (Specify)</option>
+                                </select>
+                                <input type="text" name="custom_role" id="customRole" class="form-control mt-2 d-none" placeholder="Enter custom role">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Event Date <span class="text-danger">*</span></label>
+                                <input type="date" name="event_date" class="form-control" required min="{{ today }}">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Location <span class="text-danger">*</span></label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="location" id="locOnline" value="online" checked autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="locOnline">Online</label>
+
+                                    <input type="radio" class="btn-check" name="location" id="locOffline" value="offline" autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="locOffline">Offline</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 d-none" id="venueWrapper">
+                                <label class="form-label fw-bold">Venue <span class="text-danger">*</span></label>
+                                <input type="text" name="venue" id="venueInput" class="form-control" placeholder="e.g. Main Auditorium">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Eligibility CGPA Cutoff</label>
+                                <input type="number" step="0.1" min="0" max="10" name="eligibility_cgpa" class="form-control" placeholder="e.g. 7.5">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Required Skills</label>
+                                <input type="text" name="eligibility_skills" class="form-control" placeholder="e.g. Java, DBMS, Next.js">
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Description</label>
+                                <textarea name="description" class="form-control" rows="3" placeholder="Additional details about the drive..."></textarea>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Registration Link</label>
+                                <input type="url" name="registration_link" class="form-control" placeholder="https://...">
+                            </div>
+                            
+                            <div class="col-12 mt-4 text-end">
+                                <button type="submit" class="btn btn-primary px-4 fw-bold">Save Event</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Dynamic Role logic
+        const roleSelect = document.getElementById('roleSelect');
+        const customRole = document.getElementById('customRole');
+        
+        roleSelect.addEventListener('change', function() {
+            if(this.value === 'other') {
+                customRole.classList.remove('d-none');
+                customRole.setAttribute('required', 'required');
+            } else {
+                customRole.classList.add('d-none');
+                customRole.removeAttribute('required');
+            }
+        });
+        
+        // Location logic
+        const locOnline = document.getElementById('locOnline');
+        const locOffline = document.getElementById('locOffline');
+        const venueWrapper = document.getElementById('venueWrapper');
+        const venueInput = document.getElementById('venueInput');
+        
+        function toggleVenue() {
+            if(locOffline.checked) {
+                venueWrapper.classList.remove('d-none');
+                venueInput.setAttribute('required', 'required');
+            } else {
+                venueWrapper.classList.add('d-none');
+                venueInput.removeAttribute('required');
+            }
+        }
+        
+        locOnline.addEventListener('change', toggleVenue);
+        locOffline.addEventListener('change', toggleVenue);
+        
+        // Set min date to today dynamically
+        const dateInput = document.querySelector('input[type="date"]');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+    });
+</script>
+{% endblock %}

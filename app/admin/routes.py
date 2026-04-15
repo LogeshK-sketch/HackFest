@@ -121,3 +121,62 @@ def export():
     """Export full dataset stringified"""
     # Simply redirects to analytics export but passing admin context
     return redirect(url_for('analytics.export'))
+
+# --- Placement Event Admin Routes ---
+from datetime import datetime
+
+@admin_bp.route('/events/add', methods=['GET', 'POST'])
+@admin_required
+def add_event():
+    if request.method == 'POST':
+        from app.models import PlacementEvent
+        company_name = request.form.get('company_name')
+        custom_role = request.form.get('custom_role')
+        role = request.form.get('role')
+        if role == 'other' and custom_role:
+            role = custom_role
+            
+        event_date_str = request.form.get('event_date')
+        location = request.form.get('location')
+        venue = request.form.get('venue', '')
+        eligibility_cgpa = request.form.get('eligibility_cgpa')
+        eligibility_skills = request.form.get('eligibility_skills', '')
+        description = request.form.get('description', '')
+        registration_link = request.form.get('registration_link', '')
+        
+        try:
+            event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+            if eligibility_cgpa:
+                eligibility_cgpa = float(eligibility_cgpa)
+            else:
+                eligibility_cgpa = None
+                
+            event = PlacementEvent(
+                company_name=company_name,
+                role=role,
+                event_date=event_date,
+                location=location,
+                venue=venue,
+                eligibility_cgpa=eligibility_cgpa,
+                eligibility_skills=eligibility_skills,
+                description=description,
+                registration_link=registration_link
+            )
+            db.session.add(event)
+            db.session.commit()
+            flash('Event added successfully!', 'success')
+            return redirect(url_for('company.calendar'))
+        except Exception as e:
+            flash(f"Error adding event: {str(e)}", 'danger')
+            
+    return render_template('company/add_event.html')
+
+@admin_bp.route('/events/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_event(id):
+    from app.models import PlacementEvent
+    event = PlacementEvent.query.get_or_404(id)
+    event.is_active = False
+    db.session.commit()
+    flash('Event deleted/deactivated successfully.', 'info')
+    return redirect(url_for('company.calendar'))
